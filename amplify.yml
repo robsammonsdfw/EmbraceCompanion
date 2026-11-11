@@ -1,0 +1,14 @@
+# Amplify app for go.embracehealth.ai — the static site in go-site/ only.
+# The phone app itself is built by EAS, not Amplify.
+version: 1
+applications:
+  - appRoot: go-site
+    frontend:
+      phases:
+        build:
+          commands:
+            - echo "static site, nothing to build"
+      artifacts:
+        baseDirectory: .
+        files:
+          - '**/*'

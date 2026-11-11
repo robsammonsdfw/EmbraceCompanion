@@ -1,0 +1,9 @@
+customHeaders:
+  - pattern: '/.well-known/apple-app-site-association'
+    headers:
+      - key: Content-Type
+        value: application/json
+  - pattern: '/.well-known/assetlinks.json'
+    headers:
+      - key: Content-Type
+        value: application/json

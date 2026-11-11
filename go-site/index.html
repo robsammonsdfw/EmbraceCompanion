@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EmbraceHealthAI Companion</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/icon.png">
+  <style>
+    :root { --teal:#08B8A0; --teal-dark:#067F6F; --orange:#F26522; --ink:#0F172A; --muted:#64748B; --line:#E2E8F0; --page:#F8FAFC; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background:var(--page); color:var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 440px; margin: 0 auto; padding: 48px 20px 32px; display:flex; flex-direction:column; gap:20px; }
+    .logo { width:84px; height:84px; border-radius:20px; background:#fff; border:1px solid var(--line); display:grid; place-items:center; }
+    .logo img { width:64px; }
+    h1 { font-size:26px; line-height:1.15; margin:0; font-weight:800; }
+    p { margin:0; font-size:16px; line-height:1.5; color:var(--muted); }
+    .tool { background:#E6F7F4; border-radius:18px; padding:16px; color:var(--teal-dark); font-weight:700; }
+    .stores { display:flex; flex-direction:column; gap:10px; }
+    .btn { display:block; text-align:center; text-decoration:none; font-weight:800; font-size:16px;
+      padding:15px 16px; border-radius:14px; }
+    .primary { background:var(--ink); color:#fff; }
+    .secondary { background:#fff; color:var(--teal-dark); border:1px solid var(--line); }
+    .soon { background:#fff; border:1px dashed var(--line); border-radius:14px; padding:14px; text-align:center; color:var(--muted); font-size:14px; }
+    [hidden] { display:none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo"><img src="/icon.png" alt=""></div>
+    <h1>Get the EmbraceHealthAI Companion app</h1>
+    <p id="why">The Companion app does the things a website can't: tracking runs with your screen locked, body scans, form checks and phone alerts.</p>
+    <div class="tool" id="tool" hidden></div>
+
+    <div class="stores">
+      <a class="btn primary" id="appstore" hidden>Download on the App Store</a>
+      <a class="btn primary" id="play" hidden>Get it on Google Play</a>
+      <div class="soon" id="soon" hidden>The Companion app is coming soon to the App Store and Google Play.</div>
+    </div>
+
+    <a class="btn secondary" id="web" href="https://app.embracehealth.ai/">Continue on the web</a>
+    <p>If you already have the app, open this link again from your phone's browser.</p>
+  </main>
+
+  <script>
+    // Store pages, once the app is published.
+    var APP_STORE_URL = '';
+    var PLAY_STORE_URL = '';
+
+    var TOOLS = {
+      'run': 'You were starting a run. The Companion keeps tracking it when your screen is off.',
+      'scan': 'You were starting a body scan, which runs in the Companion on phones.',
+      'msk': 'You were starting a form check, which runs in the Companion.',
+      'alerts': 'The Companion sends your EmbraceHealthAI alerts to your phone.'
+    };
+    var RETURN_HOSTS = ['app.embracehealth.ai', 'run.embracehealth.ai', 'scan.embracehealth.ai'];
+
+    var tool = location.pathname.split('/')[1] || '';
+    if (TOOLS[tool]) {
+      var el = document.getElementById('tool');
+      el.textContent = TOOLS[tool];
+      el.hidden = false;
+    }
+
+    try {
+      var ret = new URLSearchParams(location.search).get('return_to');
+      if (ret) {
+        var u = new URL(ret);
+        if (u.protocol === 'https:' && RETURN_HOSTS.indexOf(u.host) !== -1) {
+          document.getElementById('web').href = u.toString();
+        }
+      }
+    } catch (e) { /* keep the main app */ }
+
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var android = /Android/.test(ua);
+    var shown = false;
+    if (APP_STORE_URL && !android) { var a = document.getElementById('appstore'); a.href = APP_STORE_URL; a.hidden = false; shown = true; }
+    if (PLAY_STORE_URL && !ios) { var g = document.getElementById('play'); g.href = PLAY_STORE_URL; g.hidden = false; shown = true; }
+    if (!shown) document.getElementById('soon').hidden = false;
+  </script>
+</body>
+</html>
