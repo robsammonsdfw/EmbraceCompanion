@@ -6,18 +6,6 @@ import { PermissionsAndroid, Platform } from 'react-native';
 
 export type PermissionResult = 'granted' | 'denied' | 'blocked';
 
-/**
- * Camera, for the scanner page and Sency. On iPhone the system asks the first
- * time the camera opens (text from NSCameraUsageDescription), so there's
- * nothing to do here.
- */
-export const ensureCamera = async (): Promise<PermissionResult> => {
-  if (Platform.OS !== 'android') return 'granted';
-  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
-  if (result === PermissionsAndroid.RESULTS.GRANTED) return 'granted';
-  return result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN ? 'blocked' : 'denied';
-};
-
 /** Location while using the app, which covers a run started in the app. */
 export const ensureLocation = async (): Promise<PermissionResult> => {
   const current = await Location.getForegroundPermissionsAsync();

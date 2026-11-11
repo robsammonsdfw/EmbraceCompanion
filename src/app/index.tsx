@@ -7,10 +7,10 @@ import { MAIN_APP_URL } from '@/shell/links';
 import { colors, radius } from '@/shell/theme';
 import { Body, Button, Card, Label, Screen } from '@/shell/ui';
 
+// Mode values are iStride's RunMode (services/activityTypes.ts in TempoRun).
 const TOOLS = [
-  { href: '/run/start', title: 'Run', note: 'Proof 2 · tracking with the screen locked' },
-  { href: '/scan', title: 'Body scan', note: 'Proof 3 · the scanner in the app' },
-  { href: '/msk', title: 'Form check', note: 'Proof 4 · Sency' },
+  { href: '/run/start?mode=CASUAL', title: 'Run', note: 'Proof 2 · tracking with the screen locked' },
+  { href: '/run/start?mode=CYCLING', title: 'Ride', note: 'Proof 2 · the same test on a bike' },
 ] as const;
 
 export default function Home() {

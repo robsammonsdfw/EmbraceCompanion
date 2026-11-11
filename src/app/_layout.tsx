@@ -21,10 +21,8 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ title: 'EmbraceHealthAI' }} />
-        <Stack.Screen name="run/start" options={{ title: 'Run' }} />
-        <Stack.Screen name="run/live" options={{ title: 'Run' }} />
-        <Stack.Screen name="scan" options={{ title: 'Body scan' }} />
-        <Stack.Screen name="msk" options={{ title: 'Form check' }} />
+        <Stack.Screen name="run/start" options={{ title: 'Activity' }} />
+        <Stack.Screen name="run/live" options={{ title: 'Activity' }} />
         <Stack.Screen name="+not-found" options={{ headerShown: false }} />
       </Stack>
     </>

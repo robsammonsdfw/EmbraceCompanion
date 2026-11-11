@@ -23,7 +23,10 @@ import {
 import { ensureAndroidNotifications, ensureLocation } from '@/shell/permissions';
 import { Body, Button, Card, Label, Screen, Stat, Title } from '@/shell/ui';
 
-const NOTICE = { title: 'Run in progress', body: 'EmbraceHealthAI Companion is tracking your route.' };
+const notice = (activity: string) => ({
+  title: `${activity === 'ride' ? 'Ride' : 'Run'} in progress`,
+  body: 'EmbraceHealthAI Companion is tracking your route.',
+});
 
 const clock = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -35,8 +38,10 @@ const clock = (ms: number) => {
 const timeOf = (t: number) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 export default function TrackingTest() {
-  const params = useLocalSearchParams<{ return_to?: string }>();
+  const params = useLocalSearchParams<{ return_to?: string; mode?: string }>();
   const returnTo = safeReturnTo(params.return_to);
+  const riding = String(params.mode ?? '').toUpperCase() === 'CYCLING';
+  const activity = riding ? 'ride' : 'run';
 
   const [session, setSession] = useState<TrackSession | null>(null);
   const [tracking, setTracking] = useState(false);
@@ -77,7 +82,7 @@ export default function TrackingTest() {
       if (!(await allowed())) return;
       await ensureAndroidNotifications();
       setFinished(null);
-      await startTracking(NOTICE);
+      await startTracking(notice(activity));
       await refresh();
     } catch (e) {
       setProblem({ text: `Couldn't start tracking: ${(e as Error).message}`, settings: false });
@@ -90,7 +95,7 @@ export default function TrackingTest() {
     setBusy(true);
     try {
       if (!(await allowed())) return;
-      await resumeTracking(NOTICE);
+      await resumeTracking(notice(activity));
       await refresh();
     } catch (e) {
       setProblem({ text: `Couldn't resume tracking: ${(e as Error).message}`, settings: false });
@@ -117,9 +122,9 @@ export default function TrackingTest() {
     <Screen>
       <Card tone="teal">
         <Label>Test build · Proof 2</Label>
-        <Title>Run with the screen locked</Title>
+        <Title>{riding ? 'Ride' : 'Run'} with the screen locked</Title>
         <Body>
-          Tap Start, lock the phone and put it in your pocket. Walk or run for 30 minutes, then come back here.
+          Tap Start, lock the phone and put it in your pocket{riding ? ' or bag' : ''}. Go for 30 minutes, then come back here.
           Write down your battery % before you start and when you finish.
         </Body>
         <Body muted>It passes if Longest gap stays under 10 seconds and the distance looks right.</Body>
@@ -136,7 +141,7 @@ export default function TrackingTest() {
         <Card tone="orange">
           <Title>Tracking stopped</Title>
           <Body>
-            The run you started at {timeOf(session.startedAt)} stopped when the app was closed
+            The {activity} you started at {timeOf(session.startedAt)} stopped when the app was closed
             {stats?.lastPointAt ? ` (last point at ${timeOf(stats.lastPointAt)})` : ''}.
           </Body>
           <Button title="Resume" onPress={resume} busy={busy} />

@@ -22,8 +22,6 @@ const config: ExpoConfig = {
     supportsTablet: false,
     associatedDomains: [`applinks:${LINK_HOST}`],
     infoPlist: {
-      NSCameraUsageDescription:
-        'The Companion uses your camera for body scans and form checks.',
       ITSAppUsesNonExemptEncryption: false,
     },
   },
@@ -35,7 +33,6 @@ const config: ExpoConfig = {
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
-    permissions: ['android.permission.CAMERA'],
     intentFilters: [
       {
         action: 'VIEW',
@@ -61,7 +58,7 @@ const config: ExpoConfig = {
       {
         // Runs are started in the app, so "While Using" is all we ask for.
         locationWhenInUsePermission:
-          'The Companion tracks your route, distance and pace during runs you start.',
+          'The Companion tracks your route, distance and pace during runs and rides you start.',
         locationAlwaysAndWhenInUsePermission: false,
         locationAlwaysPermission: false,
         motionUsagePermission: false,
@@ -72,16 +69,9 @@ const config: ExpoConfig = {
     ],
     'expo-sqlite',
     'expo-secure-store',
-    // Sency's iOS frameworks need use_frameworks (see plugins/withSency.js).
-    ['expo-build-properties', { ios: { useFrameworks: 'static' } }],
-    './plugins/withSency',
   ],
   experiments: {
     reactCompiler: true,
-  },
-  extra: {
-    // Set as an EAS environment variable, never committed.
-    sencyApiKey: process.env.SENCY_API_KEY ?? '',
   },
 };
 
