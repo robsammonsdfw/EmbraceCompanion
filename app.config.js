@@ -75,6 +75,10 @@ const config = {
   experiments: {
     reactCompiler: true,
   },
+  extra: {
+    // Expo project @rsammons/embracehealthai-companion
+    eas: { projectId: '9923e540-a501-4491-8006-c4aca8f5c796' },
+  },
 };
 
 module.exports = config;
