@@ -15,7 +15,7 @@ never hand-edit `ios/` or `android/`.
 ## Who owns what
 | Folder | Owner |
 |---|---|
-| `src/app/`, `src/shell/`, `app.config.ts`, `eas.json`, `go-site/` | Main app (EmbraceMacro) session |
+| `src/app/`, `src/shell/`, `app.config.js`, `eas.json`, `go-site/` | Main app (EmbraceMacro) session |
 | `src/modules/run/` | iStride session |
 
 - **Other folders.** A module session changes only its own folder. If it needs something from the

@@ -1,13 +1,15 @@
-import type { ExpoConfig } from 'expo/config';
-
 // EmbraceHealthAI Companion — see docs in EmbraceMacro: COMPANION_APP_PLAN.md.
+// Plain JavaScript on purpose: every tool that reads it (EAS CLI included)
+// can load it, whatever its Node version.
 // ios/ and android/ are generated from this file at build time (Continuous
 // Native Generation). Never create or edit them by hand.
 
 const BUNDLE_ID = 'ai.embracehealth.companion';
 const LINK_HOST = 'go.embracehealth.ai';
 
-const config: ExpoConfig = {
+/** @type {import('expo/config').ExpoConfig} */
+const config = {
+  owner: 'rsammons',
   name: 'EmbraceHealthAI Companion',
   slug: 'embracehealthai-companion',
   version: '0.1.0',
@@ -75,4 +77,4 @@ const config: ExpoConfig = {
   },
 };
 
-export default config;
+module.exports = config;

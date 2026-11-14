@@ -19,7 +19,7 @@ src/app/            screens; the path matches the go link (/run/start, /run/live
 src/shell/          links, permissions, location tracking, on-device storage, UI pieces
 src/modules/run/    iStride's dashboard (Phase 3). For now, the Proof 2 test screen
 go-site/            go.embracehealth.ai: the "Get the Companion app" page (Amplify)
-app.config.ts       app name, ids, permissions, links
+app.config.js       app name, ids, permissions, links
 eas.json            build profiles: development, preview (testers), production
 ```
 

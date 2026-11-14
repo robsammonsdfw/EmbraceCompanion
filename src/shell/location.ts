@@ -3,7 +3,7 @@
 // (COMPANION_APP_PLAN.md §2.5). The Run module uses this; it doesn't start
 // location updates itself.
 //
-//   iPhone   UIBackgroundModes: location (app.config.ts). Started while the
+//   iPhone   UIBackgroundModes: location (app.config.js). Started while the
 //            app is open, so "While Using" permission is enough.
 //   Android  A foreground service with a "Run in progress" notification.
 //
