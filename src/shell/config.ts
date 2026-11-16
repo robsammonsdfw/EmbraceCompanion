@@ -3,11 +3,8 @@
 /** The main EmbraceHealthAI API (EmbraceMacro's Lambda). */
 export const MAIN_API_URL = 'https://xmpbc16u1f.execute-api.us-west-1.amazonaws.com/default';
 
-/**
- * iStride's API (TempoRun's Lambda) — the same address as VITE_API_URL in the
- * run.embracehealth.ai Amplify app. Null until it's filled in; istride() says so.
- */
-export const RUN_API_URL: string | null = null;
+/** iStride's API (TempoRun's Lambda): VITE_API_URL in the run.embracehealth.ai Amplify app. */
+export const RUN_API_URL: string | null = 'https://u3hejmxncufr6t4izpvjs2bvca0zowea.lambda-url.us-west-1.on.aws';
 
 /** Where "Open EmbraceHealthAI" and "Open iStride" go. */
 export const MAIN_APP_URL = 'https://app.embracehealth.ai/';

@@ -28,7 +28,7 @@ eas.json            build profiles: development, preview (testers), production
 ## Current state: Phase 0 test build
 - **Home.** Run and Ride tests, and the last link that opened the app.
 - **Proof 1: links.** `go.embracehealth.ai` links open the app. This needs the well-known files,
-  which go up once the Apple Team ID and Android signing fingerprint exist.
+  The iPhone file is up (Team 85GPQ25KC4); the Android one waits for the first Android build.
 - **Proof 2: tracking.** `/run/start` tracks with the screen locked. It shows points, distance and
   the longest gap between points. A test cut off by a kill can be resumed or finished.
 
