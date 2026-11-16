@@ -7,8 +7,8 @@ applications:
       phases:
         build:
           commands:
-            - echo "static site, nothing to build"
+            - echo static-site
       artifacts:
-        baseDirectory: .
+        baseDirectory: /
         files:
           - '**/*'
