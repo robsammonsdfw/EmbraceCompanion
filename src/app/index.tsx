@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MAIN_APP_URL } from '@/shell/links';
@@ -19,12 +19,17 @@ export default function Home() {
     <Screen>
       <View style={styles.tiles}>
         {TOOLS.map((t) => (
-          <Link key={t.href} href={t.href} asChild>
-            <Pressable style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
-              <Text style={styles.tileTitle}>{t.title}</Text>
-              <Text style={styles.tileNote}>{t.note}</Text>
-            </Pressable>
-          </Link>
+          // A plain Pressable: wrapped in <Link asChild>, its style function was
+          // dropped on iPhone and the teal tiles rendered without a background.
+          <Pressable
+            key={t.href}
+            accessibilityRole="button"
+            onPress={() => router.push(t.href)}
+            style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+          >
+            <Text style={styles.tileTitle}>{t.title}</Text>
+            <Text style={styles.tileNote}>{t.note}</Text>
+          </Pressable>
         ))}
       </View>
 

@@ -79,6 +79,13 @@ const config = {
     // Expo project @rsammons/embracehealthai-companion
     eas: { projectId: '9923e540-a501-4491-8006-c4aca8f5c796' },
   },
+  // Over-the-air updates (EAS Update): JavaScript-only changes reach installed
+  // builds without a rebuild. A build only takes updates made for its own
+  // app version, so a version bump needs a new build.
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: 'https://u.expo.dev/9923e540-a501-4491-8006-c4aca8f5c796',
+  },
 };
 
 module.exports = config;
