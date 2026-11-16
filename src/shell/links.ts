@@ -8,7 +8,7 @@
 
 import * as Linking from 'expo-linking';
 
-export const MAIN_APP_URL = 'https://app.embracehealth.ai/';
+import { MAIN_APP_URL } from './config';
 
 const RETURN_HOSTS = new Set(['app.embracehealth.ai', 'run.embracehealth.ai', 'scan.embracehealth.ai']);
 

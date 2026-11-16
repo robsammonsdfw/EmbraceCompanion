@@ -2,6 +2,7 @@
 // never at first launch (COMPANION_APP_PLAN.md §2.7).
 
 import * as Location from 'expo-location';
+import { Pedometer } from 'expo-sensors';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 export type PermissionResult = 'granted' | 'denied' | 'blocked';
@@ -22,4 +23,13 @@ export const ensureLocation = async (): Promise<PermissionResult> => {
 export const ensureAndroidNotifications = async (): Promise<void> => {
   if (Platform.OS !== 'android' || Number(Platform.Version) < 33) return;
   await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+};
+
+/** Motion, for counting steps on walks (expo-sensors Pedometer). */
+export const ensureMotion = async (): Promise<PermissionResult> => {
+  const current = await Pedometer.getPermissionsAsync();
+  if (current.granted) return 'granted';
+  const asked = await Pedometer.requestPermissionsAsync();
+  if (asked.granted) return 'granted';
+  return asked.canAskAgain ? 'denied' : 'blocked';
 };

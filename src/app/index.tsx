@@ -3,7 +3,8 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { MAIN_APP_URL } from '@/shell/links';
+import { useSession } from '@/shell/auth';
+import { MAIN_APP_URL } from '@/shell/config';
 import { colors, radius } from '@/shell/theme';
 import { Body, Button, Card, Label, Screen } from '@/shell/ui';
 
@@ -15,8 +16,10 @@ const TOOLS = [
 
 export default function Home() {
   const lastLink = Linking.useLinkingURL();
+  const member = useSession()?.member;
   return (
     <Screen>
+      {member && <Body muted>Signed in as {member.firstName || member.email}</Body>}
       <View style={styles.tiles}>
         {TOOLS.map((t) => (
           // A plain Pressable: wrapped in <Link asChild>, its style function was

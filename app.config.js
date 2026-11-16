@@ -35,6 +35,8 @@ const config = {
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
+    // Step counting on walks (Android 10+).
+    permissions: ['android.permission.ACTIVITY_RECOGNITION'],
     intentFilters: [
       {
         action: 'VIEW',
@@ -60,17 +62,21 @@ const config = {
       {
         // Runs are started in the app, so "While Using" is all we ask for.
         locationWhenInUsePermission:
-          'The Companion tracks your route, distance and pace during runs and rides you start.',
+          'The Companion tracks your route, distance and pace during activities you start, including while your phone is locked.',
         locationAlwaysAndWhenInUsePermission: false,
         locationAlwaysPermission: false,
-        motionUsagePermission: false,
+        motionUsagePermission: 'The Companion counts your steps during walks.',
         isIosBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
         androidForegroundServiceIcon: './assets/images/notification-icon.png',
       },
     ],
     'expo-sqlite',
-    'expo-secure-store',
+    ['expo-secure-store', { faceIDPermission: false }],
+    // Spoken cues keep playing with the screen locked (adds the audio background mode on iPhone).
+    ['expo-audio', { enableBackgroundPlayback: true, microphonePermission: false }],
+    ['expo-sensors', { motionPermission: 'The Companion counts your steps during walks.' }],
+    '@maplibre/maplibre-react-native',
   ],
   experiments: {
     reactCompiler: true,

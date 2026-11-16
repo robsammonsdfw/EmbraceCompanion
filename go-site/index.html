@@ -33,6 +33,8 @@
     <p id="why">The Companion app does the things a website can't: tracking runs with your screen locked, body scans, form checks and phone alerts.</p>
     <div class="tool" id="tool" hidden></div>
 
+    <a class="btn primary" id="open" href="#">I have the app: open it</a>
+
     <div class="stores">
       <a class="btn primary" id="appstore" hidden>Download on the App Store</a>
       <a class="btn primary" id="play" hidden>Get it on Google Play</a>
@@ -72,6 +74,12 @@
         }
       }
     } catch (e) { /* keep the main app */ }
+
+    // When iPhone or Android doesn't hand this link to the app by itself (it was
+    // opened from code, or the app's link file isn't up yet), this button does,
+    // with the same tool, code and way back.
+    document.getElementById('open').href =
+      'embracehealthai://' + location.pathname.replace(/^\//, '') + location.search;
 
     var ua = navigator.userAgent;
     var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
