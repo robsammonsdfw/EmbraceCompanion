@@ -47,7 +47,11 @@ export type RunEvent =
   | { t: number; type: 'target_distance'; m: number }
   | { t: number; type: 'hiit_rounds'; rounds: number }
   | { t: number; type: 'hiit_toggle' }
-  | { t: number; type: 'off_route_dismiss' };
+  | { t: number; type: 'off_route_dismiss' }
+  /** Reroute: a new way to the finish, as [lat, lng] pairs. */
+  | { t: number; type: 'reroute'; path: [number, number][] }
+  /** Pace to the song: the target speed that puts each step on the beat. */
+  | { t: number; type: 'song'; mps: number; bpm: number; cadence: number };
 
 export interface EngineConfig {
   mode: RunMode;
@@ -107,6 +111,8 @@ export class RunEngine {
   hiitPlan: HiitPlan | null;
   hiitManual: { kind: 'work' | 'rest'; since: number; round: number } | null = null;
   isOffRoute = false;
+  /** The route being followed: the one from setup, or the latest reroute. */
+  plannedRoute: { lat: number; lng: number }[];
   /** Fastest smoothed speed of any point so far. */
   maxPointSpeed = 0;
   /** Accuracy of the newest point (m), for the GPS pill; null before the first. */
@@ -150,6 +156,7 @@ export class RunEngine {
     this.targetDistance = cfg.targetDistance;
     this.targetSpeed = cfg.targetSpeed;
     this.hiitPlan = cfg.hiitPlan;
+    this.plannedRoute = cfg.plannedRoute;
     const t0 = cfg.startedAt;
     this.splitStartTime = t0;
     this.segmentStart = t0;
@@ -277,6 +284,21 @@ export class RunEngine {
         this.offRouteDismissed = true;
         this.isOffRoute = false;
         return;
+      case 'reroute':
+        if (ev.path.length < 2) return;
+        this.plannedRoute = ev.path.map(([lat, lng]) => ({ lat, lng }));
+        this.offRouteDismissed = false;
+        this.isOffRoute = false;
+        this.say(`reroute-${t}`, t, 'Route updated.');
+        return;
+      case 'song': {
+        this.targetSpeed = Math.min(8, Math.max(0.8, ev.mps));
+        this.lastSpeedAlert = t; // a moment to settle in before "pick it up"
+        this.behindSince = null;
+        const per = this.cfg.unit === 'imperial' ? 'mile' : 'kilometer';
+        this.say(`song-${t}`, t, `Song is ${ev.bpm} beats a minute. New target pace ${calculatePace(this.targetSpeed, this.cfg.unit)} per ${per}, ${ev.cadence} steps a minute.`);
+        return;
+      }
     }
   }
 
@@ -462,7 +484,7 @@ export class RunEngine {
   }
 
   private checkDeviation(pos: GeoPoint) {
-    const planned = this.cfg.plannedRoute;
+    const planned = this.plannedRoute;
     if (!planned || planned.length === 0) return;
     const now = pos.timestamp;
     if (!this.routeGraceOver) {

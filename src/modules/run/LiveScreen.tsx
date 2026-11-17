@@ -9,7 +9,7 @@
 
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router, Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,8 +20,12 @@ import { retryUpload, useUpload } from '@/shell/uploads';
 import { activityLabel, modeTitle } from './calc/activityTypes';
 import { formatClock } from './calc/constants';
 import { RunMode } from './calc/types';
-import { CasualDash, distanceText, HeartWalkDash, HiitDash, RideWalkDash, RunDash, SimpleDash, type DashProps } from './Dashboards';
+import { CasualDash, distanceText, HeartWalkDash, HiitDash, MapPanel, RideWalkDash, RunDash, SimpleDash, WeatherPanel, type DashProps } from './Dashboards';
+import { noteScrollY, setScroll } from './helper/core';
+import type { ScreenId } from './helper/guides';
+import { Help, HelperLayer, HelperPill, useHelperScreen } from './helper/ui';
 import { activeSteps, clearLive, discardActivity, finishActivity, pause, resume, useLive } from './liveRun';
+import { closePanel, usePanel } from './panels';
 import { Chip, DarkButton, distUnit, ink, Panel, Row, s } from './parts';
 import { RecoveryCard } from './RecoveryCard';
 import { forgetActivity, getPref, setPref } from './store';
@@ -51,6 +55,16 @@ export default function LiveScreen() {
     setScreenOn(saved === null ? kind === 'ride' : saved === '1');
   }, [kind]);
   const finished = live ? live.engine.finishedAt !== null : false;
+  const panel = usePanel();
+  // Helper Mode: which screen this is, and the scrolling area it may scroll to a control in.
+  const mode = live?.activity.setup.mode ?? null;
+  const helperScreen: ScreenId | null = !live || finished ? null
+    : kind === 'hiit' ? 'live.hiit' : kind === 'ride' ? 'live.ride' : kind === 'walk' ? 'live.walk' : kind === 'heartwalk' ? 'live.heartwalk'
+    : mode === RunMode.CASUAL ? 'live.casual' : mode === RunMode.ACADEMY ? 'live.academy' : mode === RunMode.TRAIL ? 'live.trail'
+    : mode === RunMode.TRACK ? 'live.track' : 'live.run';
+  useHelperScreen(helperScreen);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  useEffect(() => { setScroll(scrollRef); return () => { setScroll(null); closePanel(); }; }, []);
   useEffect(() => {
     if (screenOn && live && !finished) { void activateKeepAwakeAsync(KEEP_AWAKE); return () => { void deactivateKeepAwake(KEEP_AWAKE); }; }
     return undefined;
@@ -92,6 +106,7 @@ export default function LiveScreen() {
   return (
     <SafeAreaView style={st.page} edges={['bottom', 'left', 'right']}>
       <Stack.Screen options={{ title }} />
+      <Help id="runs.live.stats">
       <View style={st.header}>
         <View>
           <Text style={[s.tileLabel, { color: accent }]}>{title}</Text>
@@ -108,13 +123,18 @@ export default function LiveScreen() {
           <Text style={[st.clock, { color: accent, fontSize: 36 }]}>{distanceText(e)} <Text style={{ fontSize: 16, color: ink.dim }}>{distUnit(e.cfg.unit)}</Text></Text>
         </View>
       </View>
+      </Help>
 
-      <ScrollView contentContainerStyle={st.body}>
+      <View style={{ flex: 1 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={st.body} scrollEventThrottle={64} onScroll={(ev) => noteScrollY(ev.nativeEvent.contentOffset.y)}>
+        <HelperPill dark />
+        <Help id="companion.screenOn">
         <Row style={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ color: ink.dim, fontSize: 14, fontWeight: '800', flex: 1 }}>Keep the screen on, big numbers</Text>
           <Switch value={!!screenOn} onValueChange={(v) => { setScreenOn(v); setPref(`screenOn.${e.kind}`, v ? '1' : '0'); }}
             trackColor={{ true: ink.teal, false: ink.line }} />
         </Row>
+        </Help>
         {screenOn ? <SimpleDash {...props} />
           : e.kind === 'hiit' ? <HiitDash {...props} />
           : e.kind === 'heartwalk' ? <HeartWalkDash {...props} />
@@ -122,6 +142,13 @@ export default function LiveScreen() {
           : setup.mode === RunMode.CASUAL ? <CasualDash {...props} />
           : <RunDash {...props} />}
       </ScrollView>
+      {/* The expanded map or the route weather, over the numbers; Pause stays below. */}
+      {panel && (
+        <View style={StyleSheet.absoluteFill}>
+          {panel === 'map' ? <MapPanel e={e} line={live.line} /> : <WeatherPanel setup={setup} />}
+        </View>
+      )}
+      </View>
 
       {/* Pause, then Resume and Stop: pinned, large enough for gloves. */}
       <View style={st.controls}>
@@ -130,15 +157,22 @@ export default function LiveScreen() {
           // the guard against a stray tap, so there's no extra question.
           <View style={{ gap: 8 }}>
             <Row>
-              <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg="#042F2E" style={st.control} textStyle={st.controlText} disabled={busy} />
-              <DarkButton title={busy ? 'Saving…' : 'Stop'} onPress={stop} bg={ink.red} fg="#FFFFFF" style={st.control} textStyle={st.controlText} disabled={busy} />
+              <Help id="runs.live.pause" style={{ flex: 1 }}>
+                <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg="#042F2E" style={st.controlIn} textStyle={st.controlText} disabled={busy} />
+              </Help>
+              <Help id="runs.live.stop" style={{ flex: 1 }}>
+                <DarkButton title={busy ? 'Saving…' : 'Stop'} onPress={stop} bg={ink.red} fg="#FFFFFF" style={st.controlIn} textStyle={st.controlText} disabled={busy} />
+              </Help>
             </Row>
             <DarkButton title="Discard this activity" onPress={discard} fg={ink.dim} disabled={busy} style={{ minHeight: 40, paddingVertical: 6, borderWidth: 0, backgroundColor: 'transparent' }} textStyle={{ fontSize: 12 }} />
           </View>
         ) : (
-          <DarkButton title="Pause" onPress={pause} bg="#FFFFFF" fg="#000000" style={st.control} textStyle={st.controlText} />
+          <Help id="runs.live.pause">
+            <DarkButton title="Pause" onPress={pause} bg="#FFFFFF" fg="#000000" style={st.controlIn} textStyle={st.controlText} />
+          </Help>
         )}
       </View>
+      <HelperLayer />
     </SafeAreaView>
   );
 }
@@ -211,6 +245,7 @@ const st = StyleSheet.create({
   body: { padding: 12, gap: 12, paddingBottom: 24 },
   controls: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)', backgroundColor: ink.bg },
   control: { flex: 1, minHeight: 84, borderRadius: 24 },
+  controlIn: { minHeight: 84, borderRadius: 24 },
   controlText: { fontSize: 26, fontStyle: 'italic' },
   tall: { minHeight: 64 },
   question: { color: ink.text, fontSize: 24, fontWeight: '900', textAlign: 'center' },

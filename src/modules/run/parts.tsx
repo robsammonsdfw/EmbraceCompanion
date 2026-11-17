@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 
 import type { Unit } from './calc/types';
+import { Help } from './helper/ui';
 
 export const ink = {
   bg: '#000000', panel: '#18181B', line: '#27272A', text: '#FFFFFF', dim: '#A1A1AA', faint: '#71717A',
@@ -71,7 +72,7 @@ export const FuelGauge: React.FC<{
   const value = !hasWeight ? '--' : hasFuelLog ? String(Math.max(0, Math.round(remaining))) : String(Math.round(burned));
   const label = !hasWeight ? 'Add weight for est.' : hasFuelLog ? (isFasted ? 'Est. glycogen kcal left' : 'Est. kcal left') : 'Est. kcal burned';
   return (
-    <View style={s.gauge}>
+    <Help id="runs.live.fuel" style={s.gauge}>
       <Text style={[s.tileLabel, { color: ink.amber }]}>Fuel</Text>
       {pct !== null && hasWeight && (
         <View style={s.bar}><View style={[s.barFill, { width: `${pct}%`, backgroundColor: low ? ink.red : ink.amber }]} /></View>
@@ -83,8 +84,10 @@ export const FuelGauge: React.FC<{
       {isFasted && hasWeight && fasted!.fat_kg > 0 && (
         <Text style={s.tileSub}>Fat stores ~{unit === 'imperial' ? `${Math.round(fasted!.fat_kg * 2.20462)} lb` : `${Math.round(fasted!.fat_kg)} kg`}</Text>
       )}
-      <DarkButton title="+ Gel" onPress={onGel} bg="#422006" fg="#FDE047" style={s.gaugeButton} />
-    </View>
+      <Help id="runs.live.gel" style={{ alignSelf: 'stretch' }}>
+        <DarkButton title="+ Gel" onPress={onGel} bg="#422006" fg="#FDE047" style={s.gaugeButton} />
+      </Help>
+    </Help>
   );
 };
 
@@ -94,13 +97,15 @@ export const HydrationGauge: React.FC<{ lost: number; intake: number; hasWeight:
   const pct = hasWeight ? Math.max(0, Math.min(100, ((net + 1000) / 1200) * 100)) : 0;
   const low = hasWeight && net < -500;
   return (
-    <View style={s.gauge}>
+    <Help id="runs.live.fluid" style={s.gauge}>
       <Text style={[s.tileLabel, { color: '#22D3EE' }]}>Fluid</Text>
       <View style={s.bar}><View style={[s.barFill, { width: `${pct}%`, backgroundColor: low ? '#0891B2' : '#22D3EE' }]} /></View>
       <Text style={s.gaugeValue}>{hasWeight ? Math.abs(Math.round(net)) : '--'}</Text>
       <Text style={s.tileSub}>{hasWeight ? `Est. mL ${net < 0 ? 'deficit' : 'surplus'}` : 'Add weight for est.'}</Text>
-      <DarkButton title="+ Sip" onPress={onSip} bg="#083344" fg="#67E8F9" style={s.gaugeButton} />
-    </View>
+      <Help id="runs.live.sip" style={{ alignSelf: 'stretch' }}>
+        <DarkButton title="+ Sip" onPress={onSip} bg="#083344" fg="#67E8F9" style={s.gaugeButton} />
+      </Help>
+    </Help>
   );
 };
 
@@ -108,7 +113,13 @@ export const HydrationGauge: React.FC<{ lost: number; intake: number; hasWeight:
 export const PulseEntry: React.FC<{ last: number | null; onSave: (bpm: number) => void }> = ({ last, onSave }) => {
   const [open, setOpen] = useState(false);
   const [bpm, setBpm] = useState(last ?? 110);
-  if (!open) return <DarkButton title="♥ Enter your pulse" onPress={() => { setBpm(last ?? 110); setOpen(true); }} fg={ink.rose} />;
+  if (!open) {
+    return (
+      <Help id="exercise.live.hrSource">
+        <DarkButton title="♥ Enter your pulse" onPress={() => { setBpm(last ?? 110); setOpen(true); }} fg={ink.rose} />
+      </Help>
+    );
+  }
   const bump = (d: number) => setBpm((v) => Math.max(40, Math.min(220, v + d)));
   return (
     <Panel>
@@ -122,7 +133,9 @@ export const PulseEntry: React.FC<{ last: number | null; onSave: (bpm: number) =
       </Row>
       <Row>
         <DarkButton title="Cancel" onPress={() => setOpen(false)} style={{ flex: 1 }} />
-        <DarkButton title="Save" onPress={() => { onSave(bpm); setOpen(false); }} bg={ink.teal} fg="#042F2E" style={{ flex: 1 }} />
+        <Help id="exercise.live.hrSet" style={{ flex: 1 }}>
+          <DarkButton title="Save" onPress={() => { onSave(bpm); setOpen(false); }} bg={ink.teal} fg="#042F2E" />
+        </Help>
       </Row>
     </Panel>
   );

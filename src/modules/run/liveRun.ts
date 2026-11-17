@@ -307,6 +307,62 @@ export const toggleHiit = () => act({ t: Date.now(), type: 'hiit_toggle' });
 export const dismissOffRoute = () => act({ t: Date.now(), type: 'off_route_dismiss' });
 
 /**
+ * Pace to the song (iStride's applySongCadence): the target speed that lands
+ * each step on the beat, at the stride measured now, else the music pacer's,
+ * else 1 m.
+ */
+export const applySong = (bpm: number, cadence: number) => {
+  const l = live;
+  if (!l) return;
+  const speed = l.engine.currentSpeed;
+  const liveStride = l.cadence > 0 ? (speed * 60) / l.cadence : 0;
+  const measured = l.cadence > 100 && speed > 1 && liveStride >= 0.5 && liveStride <= 2.2;
+  const pacer = l.activity.setup.pacer_stride_m;
+  const stride = measured ? liveStride : pacer && pacer > 0.3 ? pacer : 1.0;
+  act({ t: Date.now(), type: 'song', mps: (cadence * stride) / 60, bpm, cadence });
+};
+
+/**
+ * Reroute (iStride's handleReroute): a walking route from where you are to
+ * your route's finish. OpenRouteService with the key iStride handed over;
+ * the public OSRM server when there's none.
+ */
+export const reroute = async (): Promise<boolean> => {
+  const l = live;
+  const here = l?.engine.route[l.engine.route.length - 1];
+  const planned = l?.engine.plannedRoute ?? [];
+  if (!l || !here || planned.length === 0) return false;
+  const end = planned[planned.length - 1];
+  let path: [number, number][] | null = null;
+  const key = l.activity.setup.routing_key;
+  if (key) {
+    try {
+      const res = await fetch('https://api.heigit.org/ors/v2/directions/foot-walking/geojson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: key },
+        body: JSON.stringify({ coordinates: [[here.lng, here.lat], [end.lng, end.lat]] }),
+      });
+      if (res.ok) {
+        const coords: number[][] = (await res.json())?.features?.[0]?.geometry?.coordinates ?? [];
+        if (coords.length > 1) path = coords.map((c) => [c[1], c[0]]);
+      }
+    } catch { /* try the fallback */ }
+  }
+  if (!path) {
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/foot/${here.lng},${here.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+      const data = await res.json();
+      const coords: number[][] = data?.code === 'Ok' ? data.routes?.[0]?.geometry?.coordinates ?? [] : [];
+      if (coords.length > 1) path = coords.map((c) => [c[1], c[0]]);
+    } catch { /* none */ }
+  }
+  if (live !== l) return false;
+  if (path) { act({ t: Date.now(), type: 'reroute', path }); return true; }
+  if (l.activity.cuesOn) void say('Could not find a new route. Try moving to a road.');
+  return false;
+};
+
+/**
  * Stop: closes the activity and hands it to the upload queue, which keeps it
  * until the server has it. Returns the key to watch the upload with.
  */

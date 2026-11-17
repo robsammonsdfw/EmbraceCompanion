@@ -28,6 +28,7 @@ import { calculatePace, formatClock, MPS_TO_KPH, MPS_TO_MPH } from './calc/const
 import { hiitPlanSummary } from './calc/hiit';
 import { isRunMode, RunMode, type Unit } from './calc/types';
 import { currentLive, interruptedActivity, startActivity, useLive } from './liveRun';
+import { Help, HelperLayer, HelperPill, useHelperScreen } from './helper/ui';
 import { RecoveryCard } from './RecoveryCard';
 import { defaultSetup, loadSetup, type RunSetup } from './setup';
 import { finishedActivities, forgetActivity, getPref, setPref, type Activity } from './store';
@@ -119,6 +120,8 @@ export default function StartScreen() {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
+  useHelperScreen('start');
+
   // An activity already running: straight to its dashboard.
   const running = !!live && live.engine.finishedAt === null;
   useEffect(() => { if (running) router.replace('/run/live'); }, [running]);
@@ -175,6 +178,7 @@ export default function StartScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: name }} />
+      <HelperPill />
       <RecoveryCard />
       {finishedActivities().map((a) => <UploadRow key={a.clientRunId} a={a} />)}
 
@@ -241,18 +245,23 @@ export default function StartScreen() {
         </Card>
       )}
 
-      {ask === 'location' && <PermissionCard kind="location" onReady={() => { void afterLocation(); }} />}
+      {ask === 'location' && <Help id="companion.permission"><PermissionCard kind="location" onReady={() => { void afterLocation(); }} /></Help>}
       {ask === 'motion' && (
         <>
-          <PermissionCard kind="motion" onReady={() => { setAsk(null); void go(true); }} />
+          <Help id="companion.permission"><PermissionCard kind="motion" onReady={() => { setAsk(null); void go(true); }} /></Help>
           <Button kind="secondary" title="Start without counting steps" onPress={() => { setAsk(null); void go(false); }} disabled={busy} />
         </>
       )}
       {problem && <Card tone="danger"><Body>{problem}</Body></Card>}
 
       {/* One activity at a time: an interrupted one is resumed, finished or discarded first (the card above). */}
-      {!loading && ask === null && !interruptedActivity() && <Button title={`Start ${activityLabel(chosen).toLowerCase()}`} onPress={() => { void start(); }} busy={busy} />}
+      {!loading && ask === null && !interruptedActivity() && (
+        <Help id="companion.start">
+          <Button title={`Start ${activityLabel(chosen).toLowerCase()}`} onPress={() => { void start(); }} busy={busy} />
+        </Help>
+      )}
       {returnTo && <Button kind="secondary" title="Back to iStride" onPress={() => { void openLink(returnTo); }} disabled={busy} />}
+      <HelperLayer />
     </Screen>
   );
 }

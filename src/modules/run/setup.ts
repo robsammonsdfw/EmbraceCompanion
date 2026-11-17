@@ -33,7 +33,27 @@ export interface RunSetup {
   gear: { gear_id?: number | null; ride_shoe_id?: number | null; kit_id?: number | null; worn_ids?: number[] };
   gear_names: { gear: string | null; ride_shoes: string | null; kit: string | null };
   weather: Record<string, unknown> | null;
+  /** The full route weather report checked on the web (TempoRun services/weatherService RouteWeather). */
+  weather_report?: { data: RouteWeather; route_name: string; saved_at: number } | null;
+  /** Step length (m) from the music pacer. */
+  pacer_stride_m?: number | null;
+  /** OpenRouteService key for Reroute. */
+  routing_key?: string | null;
   pause_weight_loss: boolean;
+}
+
+export interface RouteWeatherSegment {
+  fromUnit: number; toUnit: number; travelCompass: string; windFromCompass: string; windSpeed: number; windGust: number;
+  relation: 'headwind' | 'tailwind' | 'crosswind'; alongComponent: number; temp: number; weatherCode: number; atTime: string;
+  confidence: 'good' | 'reduced';
+}
+export interface RouteWeather {
+  segments: RouteWeatherSegment[];
+  summary: {
+    headwindPct: number; tailwindPct: number; crosswindPct: number; maxGust: number; tempMin: number; tempMax: number;
+    apparentMin: number; apparentMax: number; precipMaxProb: number; advice: string[];
+  };
+  unitLabels: { distance: string; speed: string; temp: string };
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
