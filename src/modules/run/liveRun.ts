@@ -12,6 +12,7 @@ import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
 import { istride } from '@/shell/api';
+import { connectHeartRate, disconnectHeartRate, lastHeartRateDevice, onHeartRate } from '@/shell/heartRate';
 import type { LngLat } from '@/shell/ActivityMap';
 import { activeSession, resumeTracking, startTracking, stopTracking, updateNotice } from '@/shell/location';
 import { ensureAndroidNotifications } from '@/shell/permissions';
@@ -28,7 +29,7 @@ import { buildRunPayload } from './calc/payload';
 import { RunMode } from './calc/types';
 import { engineConfig, type RunSetup } from './setup';
 import {
-  activeActivity, addEvent, createActivity, cueSpoken, eventsAfter, lastPointAt, markAlive, markCue, pointsAfter, setStatus,
+  activeActivity, addEvent, createActivity, cueSpoken, eventsAfter, getPref, lastPointAt, markAlive, markCue, pointsAfter, setStatus,
   type Activity,
 } from './store';
 import { beep, hush, prefetch, say } from './voice';
@@ -182,11 +183,36 @@ const noteStepsAt = (l: Live, ev: RunEvent & { steps?: number }) => {
   }
 };
 
+// A connected heart-rate monitor: its readings are written down about once a
+// second as they arrive (screen locked or not), so the average, max and time
+// in zone survive the app being closed.
+let stopHeartRate: (() => void) | null = null;
+let lastMonitorWrite = 0;
+const watchHeartRate = () => {
+  stopHeartRate?.();
+  stopHeartRate = onHeartRate((bpm) => {
+    const l = live;
+    const now = Date.now();
+    if (!l || l.engine.finishedAt !== null || l.engine.isPaused || now - lastMonitorWrite < 950) return;
+    lastMonitorWrite = now;
+    addEvent(l.activity.clientRunId, { t: now, type: 'hrm', bpm });
+  });
+  // The strap used last time connects by itself (Bluetooth was allowed then).
+  const last = lastHeartRateDevice();
+  if (last && getPref('perm.bluetooth') === 'granted') connectHeartRate(last.id).catch(() => undefined);
+};
+
 const startLoop = () => {
   if (timer) clearInterval(timer);
   timer = setInterval(step, 1000);
+  watchHeartRate();
 };
-const stopLoop = () => { if (timer) { clearInterval(timer); timer = null; } };
+const stopLoop = () => {
+  if (timer) { clearInterval(timer); timer = null; }
+  stopHeartRate?.();
+  stopHeartRate = null;
+  disconnectHeartRate().catch(() => undefined);
+};
 
 const newLive = (activity: Activity): Live => ({
   activity,
@@ -299,7 +325,7 @@ export const pause = () => { const l = live; if (l && !l.engine.isPaused) { hush
 export const resume = () => { const l = live; if (l && l.engine.isPaused) act({ t: Date.now(), type: 'resume', steps: l.rawSteps }); };
 export const logGel = () => act({ t: Date.now(), type: 'gel' });
 export const logSip = () => act({ t: Date.now(), type: 'sip' });
-export const enterHeartRate = (bpm: number) => act({ t: Date.now(), type: 'hr', bpm });
+export const enterHeartRate = (bpm: number, source: 'manual' | 'camera' = 'manual') => act({ t: Date.now(), type: 'hr', bpm, source });
 export const adjustTargetSpeed = (delta: number) => { if (live) act({ t: Date.now(), type: 'target_speed', mps: nextTargetSpeed(live.engine, delta) }); };
 export const adjustTargetDistance = (delta: number | null) => { if (live) act({ t: Date.now(), type: 'target_distance', m: nextTargetDistance(live.engine, delta) }); };
 export const adjustHiitRounds = (delta: number) => { const p = live?.engine.hiitPlan; if (p) act({ t: Date.now(), type: 'hiit_rounds', rounds: p.rounds + delta }); };

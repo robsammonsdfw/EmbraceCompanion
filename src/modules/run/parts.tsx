@@ -1,7 +1,7 @@
 // The live dashboard's building blocks: dark, with big numbers readable at
 // arm's length outdoors, and controls large enough for gloves.
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 
 import type { Unit } from './calc/types';
@@ -106,38 +106,6 @@ export const HydrationGauge: React.FC<{ lost: number; intake: number; hasWeight:
         <DarkButton title="+ Sip" onPress={onSip} bg="#083344" fg="#67E8F9" style={s.gaugeButton} />
       </Help>
     </Help>
-  );
-};
-
-/** Type your pulse: big − and + around the number, then Save. */
-export const PulseEntry: React.FC<{ last: number | null; onSave: (bpm: number) => void }> = ({ last, onSave }) => {
-  const [open, setOpen] = useState(false);
-  const [bpm, setBpm] = useState(last ?? 110);
-  if (!open) {
-    return (
-      <Help id="exercise.live.hrSource">
-        <DarkButton title="♥ Enter your pulse" onPress={() => { setBpm(last ?? 110); setOpen(true); }} fg={ink.rose} />
-      </Help>
-    );
-  }
-  const bump = (d: number) => setBpm((v) => Math.max(40, Math.min(220, v + d)));
-  return (
-    <Panel>
-      <Text style={[s.tileLabel, { color: ink.rose, textAlign: 'center' }]}>Your pulse now (beats a minute)</Text>
-      <Row style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <Nudge label="Down 10" text="−10" onPress={() => bump(-10)} wide />
-        <Nudge label="Down 1" text="−" onPress={() => bump(-1)} />
-        <Text style={[s.gaugeValue, { fontSize: 44, width: 90, textAlign: 'center' }]}>{bpm}</Text>
-        <Nudge label="Up 1" text="+" onPress={() => bump(1)} />
-        <Nudge label="Up 10" text="+10" onPress={() => bump(10)} wide />
-      </Row>
-      <Row>
-        <DarkButton title="Cancel" onPress={() => setOpen(false)} style={{ flex: 1 }} />
-        <Help id="exercise.live.hrSet" style={{ flex: 1 }}>
-          <DarkButton title="Save" onPress={() => { onSave(bpm); setOpen(false); }} bg={ink.teal} fg="#042F2E" />
-        </Help>
-      </Row>
-    </Panel>
   );
 };
 

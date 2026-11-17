@@ -18,18 +18,18 @@
 //      eases to zero, as the web's does on its once-a-second zero-speed fixes.
 //   3. The web waits for a good GPS fix before Start. Here the clock starts at
 //      once and points don't count until one is within 20 m (or 20 s pass).
-//   4. No heart-rate strap or camera check yet (Phase 3c): heart rate is a
-//      number the member types, shown for 2 minutes like the web's typed one.
+//   4. A heart-rate strap's readings arrive as events (about one a second), so
+//      a rebuilt activity has the same average, max and time in zone.
 // ============================================================================
 
 import { academyPhaseAt, ACADEMY_DONE_CUE, splitWord } from './academy';
 import { kindOfMode, maxSpeedFor, maxTargetFor, defaultTargetFor, type ActivityKind } from './activityTypes';
 import {
-  AdaptiveSmoother, calculateCaloriesPerSecondMETs, calculatePace, getDistanceFromLatLonInM,
+  AdaptiveSmoother, calculateCaloriesPerSecondHR, calculateCaloriesPerSecondMETs, calculatePace, getDistanceFromLatLonInM,
   MPS_TO_KPH, MPS_TO_MPH, speakDuration,
 } from './constants';
 import { cyclingKcalPerSecond, walkingKcalPerSecond } from './exerciseCalories';
-import { zoneOf, zoneRange } from './heartZones';
+import { emptyZoneSeconds, zoneOf, zoneRange, type ZoneSeconds } from './heartZones';
 import { hiitCue, hiitPhaseAt, hiitPhases, type HiitPhase, type HiitPlan } from './hiit';
 import { RunMode, TrainingZone, type BodyProfile, type GeoPoint, type Interval, type Split, type Unit } from './types';
 
@@ -42,7 +42,10 @@ export type RunEvent =
   | { t: number; type: 'resume' }
   | { t: number; type: 'gel' }
   | { t: number; type: 'sip' }
-  | { t: number; type: 'hr'; bpm: number }
+  /** A pulse check with the camera, or a number typed in: shown for 2 minutes. */
+  | { t: number; type: 'hr'; bpm: number; source?: 'manual' | 'camera' }
+  /** A reading from a connected heart-rate monitor. */
+  | { t: number; type: 'hrm'; bpm: number }
   | { t: number; type: 'target_speed'; mps: number }
   | { t: number; type: 'target_distance'; m: number }
   | { t: number; type: 'hiit_rounds'; rounds: number }
@@ -102,8 +105,14 @@ export class RunEngine {
   caloriesConsumed = 0;
   fluidLostMl = 0;
   fluidIntakeMl = 0;
-  /** The last number the member typed, and when. */
-  spotHr: { bpm: number; at: number } | null = null;
+  /** The last pulse check or typed number, and when. */
+  spotHr: { bpm: number; at: number; source: 'manual' | 'camera' } | null = null;
+  /** The monitor's newest reading, and when. Live while under 5 s old. */
+  monitorHr: { bpm: number; at: number } | null = null;
+  /** Where the heart rate that counts right now came from. */
+  hrSource: 'monitor' | 'camera' | 'manual' | null = null;
+  /** Average, max and time in zone: from the monitor only (a spot check can't time a zone). */
+  hrStats: { sum: number; n: number; max: number; zones: ZoneSeconds } = { sum: 0, n: 0, max: 0, zones: emptyZoneSeconds() };
   /** The heart rate that counts as live right now (0 = none). */
   currentHeartRate = 0;
   targetDistance: number;
@@ -236,7 +245,10 @@ export class RunEngine {
       case 'gel': this.caloriesConsumed += KCAL_PER_GEL; return;
       case 'sip': this.fluidIntakeMl += ML_PER_SIP; return;
       case 'hr':
-        if (ev.bpm >= 30 && ev.bpm <= 240) this.spotHr = { bpm: Math.round(ev.bpm), at: t };
+        if (ev.bpm >= 30 && ev.bpm <= 240) this.spotHr = { bpm: Math.round(ev.bpm), at: t, source: ev.source ?? 'manual' };
+        return;
+      case 'hrm':
+        if (ev.bpm >= 30 && ev.bpm <= 240) this.monitorHr = { bpm: Math.round(ev.bpm), at: t };
         return;
       case 'target_speed': {
         this.targetSpeed = ev.mps > 0 ? ev.mps : null;
@@ -526,12 +538,23 @@ export class RunEngine {
       if (this.currentSpeed < 0.05) this.currentSpeed = 0;
     }
 
-    // Heart rate is only ever a real reading: a typed number shows for 2
-    // minutes, then it's too old to call live.
+    // Heart rate is only ever a real reading. Live: a monitor (fresh within
+    // 5 s). A pulse check or a typed number shows for 2 minutes, then it's
+    // too old to call live.
+    const mon = this.monitorHr;
+    const fromMonitor = !!mon && tickNow - mon.at <= 5000;
     const sp = this.spotHr;
-    const hrAge = sp ? (tickNow - sp.at) / 1000 : Infinity;
-    const hr = sp && hrAge <= 120 ? sp.bpm : 0;
+    const spFresh = !!sp && (tickNow - sp.at) / 1000 <= 120;
+    // Whichever is newer when both are fresh.
+    const useMonitor = fromMonitor && (!spFresh || mon!.at >= sp!.at);
+    const hr = useMonitor ? mon!.bpm : spFresh ? sp!.bpm : 0;
+    this.hrSource = useMonitor ? 'monitor' : spFresh ? sp!.source : null;
     const mx = cfg.maxHr;
+    if (useMonitor && hr > 0) {
+      const st = this.hrStats;
+      st.sum += hr * dt; st.n += dt; st.max = Math.max(st.max, hr);
+      if (mx) st.zones[zoneOf(hr, mx)] += dt;
+    }
     // Heart walk: keep the walker in their target zone.
     if (this.kind === 'heartwalk' && hr > 0 && mx) {
       const z = zoneOf(hr, mx);
@@ -560,8 +583,12 @@ export class RunEngine {
     }
 
     // Calories need a body weight. Each activity burns differently.
+    // A live heart rate (with age and sex) beats any speed model, so it's
+    // used whenever there is one.
     const kg = cfg.body.weight;
+    const hrCals = useMonitor && hr > 0 ? calculateCaloriesPerSecondHR(hr, cfg.body) : 0;
     const calsPerSecond = !(kg > 0) ? 0
+      : hrCals > 0 ? hrCals
       : this.kind === 'ride' ? cyclingKcalPerSecond(this.currentSpeed, this.currentGradient, kg)
       : this.kind === 'walk' || this.kind === 'heartwalk' ? walkingKcalPerSecond(this.currentSpeed, this.currentGradient, kg)
       : calculateCaloriesPerSecondMETs(this.currentSpeed, kg);

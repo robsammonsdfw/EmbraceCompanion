@@ -21,6 +21,7 @@ import { activityLabel, modeTitle } from './calc/activityTypes';
 import { formatClock } from './calc/constants';
 import { RunMode } from './calc/types';
 import { CasualDash, distanceText, HeartWalkDash, HiitDash, MapPanel, RideWalkDash, RunDash, SimpleDash, WeatherPanel, type DashProps } from './Dashboards';
+import { PulseCheck } from './HeartRate';
 import { noteScrollY, setScroll } from './helper/core';
 import type { ScreenId } from './helper/guides';
 import { Help, HelperLayer, HelperPill, useHelperScreen } from './helper/ui';
@@ -142,10 +143,10 @@ export default function LiveScreen() {
           : setup.mode === RunMode.CASUAL ? <CasualDash {...props} />
           : <RunDash {...props} />}
       </ScrollView>
-      {/* The expanded map or the route weather, over the numbers; Pause stays below. */}
+      {/* The expanded map, the route weather or the pulse check, over the numbers; Pause stays below. */}
       {panel && (
         <View style={StyleSheet.absoluteFill}>
-          {panel === 'map' ? <MapPanel e={e} line={live.line} /> : <WeatherPanel setup={setup} />}
+          {panel === 'map' ? <MapPanel e={e} line={live.line} /> : panel === 'pulse' ? <PulseCheck /> : <WeatherPanel setup={setup} />}
         </View>
       )}
       </View>

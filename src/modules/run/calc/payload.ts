@@ -32,6 +32,7 @@ export interface PayloadExtras {
 export const buildRunPayload = (e: RunEngine, x: PayloadExtras) => {
   const kind = kindOfMode(e.cfg.mode);
   const plan = e.hiitPlan;
+  const st = e.hrStats;
   return {
     client_run_id: x.clientRunId,
     start_time: new Date(e.cfg.startedAt).toISOString(),
@@ -39,8 +40,8 @@ export const buildRunPayload = (e: RunEngine, x: PayloadExtras) => {
     duration_seconds: e.elapsedTime,
     distance_meters: e.totalDistance,
     calories_burned: e.caloriesBurned,
-    // 0 means nothing was measured. Never store a placeholder heart rate.
-    avg_heart_rate: e.currentHeartRate > 0 ? e.currentHeartRate : null,
+    // Average, max and time in zone are a monitor's only. Never a placeholder.
+    avg_heart_rate: st.n > 0 ? Math.round(st.sum / st.n) : null,
     hr_pre: x.hrPre?.bpm ?? null,
     hr_source: x.hrPre?.source ?? null,
     hr_confidence: x.hrPre?.confidence ?? null,
@@ -51,15 +52,14 @@ export const buildRunPayload = (e: RunEngine, x: PayloadExtras) => {
     summary_completed: false, // the member finishes the report in iStride
     timezone: x.timezone,
     route_id: x.routeId,
-    // No heart-rate monitor in the Companion yet, so no measured average, max or zones.
-    max_heart_rate: null,
-    hr_zone_seconds: null,
+    max_heart_rate: st.max || null,
+    hr_zone_seconds: st.n > 0 ? { max_hr: e.cfg.maxHr, seconds: st.zones.map((v) => Math.round(v)) } : null,
     workout_json: {
       kind,
       ...(kind === 'heartwalk' ? { target_zone: e.cfg.targetZone } : {}),
       ...((kind === 'walk' || kind === 'heartwalk') && x.steps !== null ? { steps: x.steps } : {}),
       ...(kind === 'hiit' && plan ? { hiit: plan.manual ? { manual: true } : { ...plan } } : {}),
-      hr_source: null,
+      hr_source: st.n > 0 ? 'monitor' : null,
       // Which tracker recorded it, to compare against the web's.
       gps_mode: 'companion',
       // For the report: the member's unit, and when the activity really ended

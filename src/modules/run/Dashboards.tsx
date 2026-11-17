@@ -13,15 +13,16 @@
 //   heartwalk  pulse, zone gauge, in / above / below zone, pace, steps.
 //   hiit       the interval card, rounds − +, sprint tiles, the interval log.
 // Controls are wrapped in <Help id> so Helper Mode can point at them; the ids
-// are iStride's. Not here yet: listening to the song through the microphone
-// (tap the beat instead), the camera pulse check and heart-rate straps. Each
-// needs a native piece from the shell.
+// are iStride's. Heart rate comes from a Bluetooth monitor, the camera pulse
+// check or a typed number (HeartRate.tsx).
 // ============================================================================
 
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { ActivityMap, type LngLat } from '@/shell/ActivityMap';
+import { ensureMicrophone, listenPcm } from '@/shell/micListen';
+import { PermissionCard } from '@/shell/PermissionCard';
 
 import { ACADEMY_TOTAL, academyPhaseAt } from './calc/academy';
 import { modeTitle } from './calc/activityTypes';
@@ -31,14 +32,16 @@ import {
 import type { RunEngine } from './calc/engine';
 import { ZONES, zoneOf, zoneRange } from './calc/heartZones';
 import { hiitPhaseAt, hiitPhases } from './calc/hiit';
-import { bpmFromTaps, stepsPerBeatFor } from './calc/tempo';
+import { bpmFromTaps, detectTempo, stepsPerBeatFor } from './calc/tempo';
 import { RunMode, TrainingZone } from './calc/types';
+import { HeartRateSource } from './HeartRate';
 import { Help } from './helper/ui';
 import {
-  adjustHiitRounds, adjustTargetDistance, adjustTargetSpeed, applySong, dismissOffRoute, enterHeartRate, logGel, logSip, reroute, toggleHiit,
+  adjustHiitRounds, adjustTargetDistance, adjustTargetSpeed, applySong, dismissOffRoute, logGel, logSip, reroute, toggleHiit,
 } from './liveRun';
 import { closePanel, openPanel } from './panels';
-import { Big, DarkButton, distUnit, FuelGauge, HydrationGauge, ink, Nudge, Panel, PulseEntry, Row, s, speedUnit, Tile } from './parts';
+import { Big, DarkButton, distUnit, FuelGauge, HydrationGauge, ink, Nudge, Panel, Row, s, speedUnit, Tile } from './parts';
+import { getPref, setPref } from './store';
 import type { RouteWeather, RunSetup } from './setup';
 
 export interface DashProps {
@@ -67,12 +70,14 @@ const finish = (e: RunEngine) => {
   return { projected, target, behind: projected !== null && target !== null && projected > target };
 };
 
-/** The typed pulse, while it's fresh enough to show. */
+/** The heart rate to show: a live monitor, else the last pulse check or typed number while it's recent. */
 const liveHr = (e: RunEngine, now: number) => {
+  const mon = e.monitorHr;
   const sp = e.spotHr;
+  if (mon && now - mon.at <= 5000 && (!sp || mon.at >= sp.at)) return { bpm: mon.bpm, age: 0, fresh: true, source: 'monitor' as const };
   if (!sp) return null;
   const age = Math.max(0, Math.round((now - sp.at) / 1000));
-  return age <= 600 ? { bpm: sp.bpm, age, fresh: age <= 120 } : null;
+  return age <= 600 ? { bpm: sp.bpm, age, fresh: age <= 120, source: sp.source } : null;
 };
 
 const TargetSpeed: React.FC<{ e: RunEngine }> = ({ e }) => {
@@ -190,7 +195,7 @@ const HrTile: React.FC<{ e: RunEngine; now: number; accent?: string }> = ({ e, n
   const zone = fresh && e.cfg.maxHr ? zoneOf(fresh.bpm, e.cfg.maxHr) : null;
   return (
     <Tile label="Heart" accent={accent} value={fresh ? fresh.bpm : '--'}
-      sub={fresh ? `${zone ? `Zone ${zone}` : 'resting'} · ${fresh.age}s ago` : 'enter below'}
+      sub={fresh ? `${zone ? `Zone ${zone}` : 'resting'} · ${fresh.source === 'monitor' ? 'live' : `${fresh.age}s ago`}` : 'add below'}
       color={fresh ? (zone ? ZONES[zone - 1].color : ink.rose) : ink.faint} />
   );
 };
@@ -334,16 +339,45 @@ const SongPace: React.FC<{ e: RunEngine; cadence: number }> = ({ e, cadence }) =
   const [count, setCount] = useState(0);
   const [result, setResult] = useState<{ bpm: number; cadence: number } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  useEffect(() => () => { if (idle.current) clearTimeout(idle.current); }, []);
+  const [listening, setListening] = useState<number | null>(null);
+  const [askMic, setAskMic] = useState(false);
+  const [alternates, setAlternates] = useState<number[]>([]);
+  const abort = useRef<AbortController | null>(null);
+  useEffect(() => () => { if (idle.current) clearTimeout(idle.current); abort.current?.abort(); }, []);
+  const refSpm = () => (cadence > 100 ? cadence : result?.cadence ?? 165);
+  const use = (bpm: number, others: number[]) => {
+    const steps = Math.round(bpm * stepsPerBeatFor(bpm, refSpm()));
+    setProblem(null);
+    setResult({ bpm: Math.round(bpm), cadence: steps });
+    setAlternates(others);
+    applySong(Math.round(bpm), steps);
+  };
+  /** Listens to the music playing out loud for 8 seconds and finds its beat. */
+  const listen = async () => {
+    setProblem(null);
+    if (getPref('perm.microphone') !== 'granted') { setAskMic(true); return; }
+    if ((await ensureMicrophone()) !== 'granted') { setProblem('The microphone isn’t allowed. Allow it in Settings, or tap the beat instead.'); return; }
+    const ctrl = new AbortController();
+    abort.current = ctrl;
+    setListening(8);
+    try {
+      const heard = await listenPcm(8, (left) => setListening(left), ctrl.signal);
+      const tempo = detectTempo(heard.samples, heard.sampleRate);
+      if (!tempo) setProblem("Couldn't find a steady beat. Turn the music up, or tap the beat instead.");
+      else use(tempo.bpm, tempo.alternates);
+    } catch (err) {
+      if (!ctrl.signal.aborted) setProblem(`${(err as Error).message} You can tap the beat instead.`);
+    } finally {
+      setListening(null);
+      abort.current = null;
+    }
+  };
   const finishTaps = () => {
     const bpm = bpmFromTaps(taps.current);
     taps.current = [];
     setCount(0);
     if (!bpm) { setProblem('Those taps were uneven. Tap steadily on each beat, at least 6 times.'); return; }
-    const steps = Math.round(bpm * stepsPerBeatFor(bpm, cadence > 100 ? cadence : result?.cadence ?? 165));
-    setProblem(null);
-    setResult({ bpm, cadence: steps });
-    applySong(bpm, steps);
+    use(bpm, [bpm * 2, bpm / 2].filter((b) => b >= 50 && b <= 220).map(Math.round));
   };
   const tap = () => {
     taps.current.push(Date.now());
@@ -356,13 +390,31 @@ const SongPace: React.FC<{ e: RunEngine; cadence: number }> = ({ e, cadence }) =
   return (
     <Help id="runs.live.song">
       <Panel>
-        <DarkButton title={count > 0 ? `Tap on each beat · ${count}/${TAPS_NEEDED}` : '♪ Tap the beat of your song'} onPress={tap} bg="#2E1065" fg="#DDD6FE" style={{ minHeight: 64 }} />
+        {askMic ? (
+          <PermissionCard kind="microphone" onReady={() => { setPref('perm.microphone', 'granted'); setAskMic(false); void listen(); }} />
+        ) : listening !== null ? (
+          <DarkButton title={`Listening… ${listening}s · tap to stop`} onPress={() => abort.current?.abort()} bg="#2E1065" fg="#DDD6FE" style={{ minHeight: 64 }} />
+        ) : (
+          <>
+            {count === 0 && <DarkButton title="♪ Update pace to current song" onPress={() => { void listen(); }} bg="#2E1065" fg="#DDD6FE" style={{ minHeight: 64 }} />}
+            <DarkButton title={count > 0 ? `Tap on each beat · ${count}/${TAPS_NEEDED}` : 'Wearing headphones? Tap the beat instead'} onPress={tap}
+              bg={count > 0 ? '#2E1065' : 'transparent'} fg="#C4B5FD" style={count > 0 ? { minHeight: 64 } : { minHeight: 44, borderWidth: 0 }} textStyle={count > 0 ? undefined : { fontSize: 13 }} />
+          </>
+        )}
         {result && e.targetSpeed ? (
           <Text style={{ color: '#DDD6FE', fontSize: 14, textAlign: 'center' }}>
             {result.bpm} beats a minute · {result.cadence} steps a minute · target pace now {calculatePace(e.targetSpeed, u)} /{distUnit(u)}
           </Text>
         ) : (
-          <Text style={[s.tileSub, { fontSize: 12 }]}>Changed songs? Tap along and your target pace moves to its beat.</Text>
+          <Text style={[s.tileSub, { fontSize: 12 }]}>Changed songs? With the music playing out loud, this finds the beat and sets your target pace so each step lands on it.</Text>
+        )}
+        {result && alternates.length > 0 && (
+          <Row style={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Text style={s.tileSub}>Not the right beat?</Text>
+            {alternates.map((b) => (
+              <DarkButton key={b} title={`${b}`} onPress={() => use(b, [result.bpm, ...alternates].filter((x) => x !== b))} fg="#C4B5FD" style={{ minHeight: 40, paddingVertical: 6 }} />
+            ))}
+          </Row>
         )}
         {problem && <Text style={{ color: ink.orange, fontSize: 13, textAlign: 'center' }}>{problem}</Text>}
       </Panel>
@@ -452,14 +504,14 @@ export const RunDash: React.FC<DashProps> = ({ e, setup, line, cadence, now }) =
       <Row>
         <Help id="runs.live.hr" style={{ flex: 1, flexDirection: 'row' }}>
           <Tile label={hr?.fresh ? 'HR' : 'Rest HR'} accent={ink.rose} value={hr?.fresh ? hr.bpm : (setup.hr_pre?.bpm ?? '--')}
-            sub={hr?.fresh ? `${hr.age}s ago` : setup.hr_pre ? 'before start' : 'enter below'} />
+            sub={hr?.fresh ? (hr.source === 'monitor' ? 'live' : `${hr.age}s ago`) : setup.hr_pre ? 'before start' : 'add below'} />
         </Help>
         <Help id="runs.live.spm" style={{ flex: 1, flexDirection: 'row' }}>
           <Tile label="SPM" accent={ink.purple} value={cadence || '--'} sub="cadence" />
         </Help>
       </Row>
       <Gauges e={e} setup={setup} />
-      <PulseEntry last={e.spotHr?.bpm ?? null} onSave={enterHeartRate} />
+      <HeartRateSource e={e} />
       <Weather setup={setup} />
     </>
   );
@@ -538,7 +590,7 @@ export const RideWalkDash: React.FC<DashProps> = ({ e, setup, line, steps, caden
       <Splits e={e} />
       <RouteMap e={e} line={line} />
       <Gauges e={e} setup={setup} />
-      <PulseEntry last={e.spotHr?.bpm ?? null} onSave={enterHeartRate} />
+      <HeartRateSource e={e} />
       <Weather setup={setup} />
     </>
   );
@@ -562,7 +614,7 @@ export const HeartWalkDash: React.FC<DashProps> = ({ e, line, steps, now }) => {
         <Big value={fresh ? String(fresh.bpm) : '--'} unit="bpm" color={ink.faint} valueColor={color} />
         {hr && (
           <Text style={[s.tileSub, { color: hr.fresh ? ink.dim : ink.rose }]}>
-            Entered {hr.age < 60 ? `${hr.age}s` : `${Math.floor(hr.age / 60)} min`} ago{hr.fresh ? '' : ' — enter it again'}
+            {hr.source === 'monitor' ? 'Live from your monitor' : `${hr.source === 'camera' ? 'Pulse check' : 'Entered'} ${hr.age < 60 ? `${hr.age}s` : `${Math.floor(hr.age / 60)} min`} ago${hr.fresh ? '' : ' — check again'}`}
           </Text>
         )}
         {/* The five zones, the target outlined, the current one lit. */}
@@ -580,21 +632,37 @@ export const HeartWalkDash: React.FC<DashProps> = ({ e, line, steps, now }) => {
               : status === 'high' ? 'Too hard — slow down'
               : status === 'low' ? `Below zone ${tz} — pick it up`
               : !maxHr ? 'Add your age or max HR in iStride for zones'
-              : 'Enter your pulse to see your zone'}
+              : 'Connect a monitor or check your pulse to see your zone'}
           </Text>
           {maxHr ? <Text style={[s.tileSub, { color: '#D4D4D8' }]}>Zone {tz} is {zoneRange(tz, maxHr).join('–')} bpm</Text> : null}
         </View>
       </Panel>
       </Help>
-      <PulseEntry last={e.spotHr?.bpm ?? null} onSave={enterHeartRate} />
+      <HeartRateSource e={e} />
       <Help id="exercise.live.tiles">
       <Row>
-        <Tile label="In zone" accent={ink.rose} value="--" sub="needs a strap" color="#4ADE80" />
+        <Tile label="In zone" accent={ink.rose} value={e.hrStats.n > 0 ? clockOf(e.hrStats.zones[tz]) : '--'} sub={e.hrStats.n > 0 ? `zone ${tz}` : 'monitor only'} color="#4ADE80" />
         <Tile label="Pace" accent={ink.rose} value={calculatePace(shownSpeed(e), u, paceMax(e))} sub={`/${distUnit(u)}`} />
         <Tile label="Steps" accent={ink.rose} value={steps ? steps.toLocaleString() : '--'} />
         <Tile label="kcal" accent={ink.rose} value={kcal(e)} sub="burned" />
       </Row>
       </Help>
+      {/* Time in each zone, once a monitor has been sending. */}
+      {e.hrStats.n > 0 && (
+        <Panel>
+          <Text style={[s.tileLabel, { color: ink.dim }]}>Time in each zone</Text>
+          {ZONES.map((z) => {
+            const secs = e.hrStats.zones[z.zone];
+            return (
+              <Row key={z.zone} style={{ alignItems: 'center' }}>
+                <Text style={{ width: 28, color: z.zone === tz ? ink.text : ink.dim, fontSize: 13, fontWeight: '900' }}>Z{z.zone}</Text>
+                <View style={[s.bar, { flex: 1 }]}><View style={[s.barFill, { width: `${Math.min(100, (secs / Math.max(1, e.hrStats.n)) * 100)}%`, backgroundColor: z.color }]} /></View>
+                <Text style={{ width: 52, textAlign: 'right', color: ink.text, fontSize: 13, fontVariant: ['tabular-nums'] }}>{clockOf(secs)}</Text>
+              </Row>
+            );
+          })}
+        </Panel>
+      )}
       <MapToggle e={e} line={line} />
     </>
   );
@@ -675,7 +743,7 @@ export const HiitDash: React.FC<DashProps> = ({ e, setup, line, now }) => {
         </Panel>
       )}
       <Gauges e={e} setup={setup} />
-      <PulseEntry last={e.spotHr?.bpm ?? null} onSave={enterHeartRate} />
+      <HeartRateSource e={e} />
       <MapToggle e={e} line={line} />
     </>
   );
