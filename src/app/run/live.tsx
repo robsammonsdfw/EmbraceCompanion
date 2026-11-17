@@ -1,1 +1,1 @@
-export { default } from '@/modules/run/TrackingTest';
+export { default } from '@/modules/run/LiveScreen';
