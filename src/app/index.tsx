@@ -1,48 +1,35 @@
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { RecoveryCard } from '@/modules/run/RecoveryCard';
 import { useSession } from '@/shell/auth';
-import { MAIN_APP_URL } from '@/shell/config';
+import { MAIN_APP_URL, RUN_APP_URL } from '@/shell/config';
 import { colors, radius } from '@/shell/theme';
-import { Body, Button, Card, Label, Screen } from '@/shell/ui';
-
-// Mode values are iStride's RunMode (services/activityTypes.ts in TempoRun).
-const TOOLS = [
-  { href: '/run/start?mode=CASUAL', title: 'Run', note: 'Proof 2 · tracking with the screen locked' },
-  { href: '/run/start?mode=CYCLING', title: 'Ride', note: 'Proof 2 · the same test on a bike' },
-] as const;
+import { Body, Button, Screen } from '@/shell/ui';
 
 export default function Home() {
-  const lastLink = Linking.useLinkingURL();
   const member = useSession()?.member;
   return (
     <Screen>
+      {/* "Resume or finish the run you started at…", when one was cut off. */}
+      <RecoveryCard />
+
       {member && <Body muted>Signed in as {member.firstName || member.email}</Body>}
-      <View style={styles.tiles}>
-        {TOOLS.map((t) => (
-          // A plain Pressable: wrapped in <Link asChild>, its style function was
-          // dropped on iPhone and the teal tiles rendered without a background.
-          <Pressable
-            key={t.href}
-            accessibilityRole="button"
-            onPress={() => router.push(t.href)}
-            style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
-          >
-            <Text style={styles.tileTitle}>{t.title}</Text>
-            <Text style={styles.tileNote}>{t.note}</Text>
-          </Pressable>
-        ))}
-      </View>
 
+      {/* A plain Pressable: inside <Link asChild> its style function was dropped on iPhone. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/run/start')}
+        style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+      >
+        <Text style={styles.tileTitle}>Start an activity</Text>
+        <Text style={styles.tileNote}>Run, ride, walk, HIIT and more, tracked with your screen locked</Text>
+      </Pressable>
+
+      <Button kind="secondary" title="Open iStride" onPress={() => Linking.openURL(RUN_APP_URL)} />
       <Button kind="secondary" title="Open EmbraceHealthAI" onPress={() => Linking.openURL(MAIN_APP_URL)} />
-
-      <Card>
-        <Label>Test build · Proof 1</Label>
-        <Body>Last link that opened the app:</Body>
-        <Text selectable style={styles.mono}>{lastLink ?? 'None yet. Tap a go.embracehealth.ai link in Safari or Chrome.'}</Text>
-      </Card>
 
       <Body muted>EmbraceHealthAI Companion {Constants.expoConfig?.version}</Body>
     </Screen>
@@ -50,10 +37,8 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  tiles: { gap: 12 },
   tile: { backgroundColor: colors.teal, borderRadius: radius.card, padding: 20, gap: 4 },
   pressed: { opacity: 0.85 },
   tileTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
   tileNote: { color: '#E6F7F4', fontSize: 13, fontWeight: '600' },
-  mono: { fontFamily: 'Courier', fontSize: 13, color: colors.ink },
 });

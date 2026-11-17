@@ -15,6 +15,7 @@
 
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { AppState, Platform } from 'react-native';
 
 import { db } from './storage';
 
@@ -120,6 +121,32 @@ export const startTracking = async (notice: Notice): Promise<TrackSession> => {
 /** Picks the open session back up after the app was closed or crashed. */
 export const resumeTracking = async (notice: Notice) => {
   if (!(await isTracking())) await startUpdates(notice);
+};
+
+let lastNotice = '';
+
+/**
+ * Changes the Android "in progress" notification while tracking (iPhone has
+ * none; nothing happens there).
+ *
+ * Android only lets the app change it while the app is on screen: expo-location
+ * restarts the foreground service to change the text, and Android refuses that
+ * from the background. So with the phone locked the notification keeps the last
+ * text set while the app was open, and calls made then are skipped quietly.
+ * Each change also briefly restarts location updates, so call it no more than
+ * every 10 seconds; the same text twice in a row is skipped.
+ */
+export const updateNotice = async (notice: Notice) => {
+  if (Platform.OS !== 'android' || AppState.currentState !== 'active') return;
+  const key = `${notice.title}\n${notice.body}`;
+  if (key === lastNotice) return;
+  try {
+    if (!(await isTracking())) return;
+    await startUpdates(notice);
+    lastNotice = key;
+  } catch {
+    // Tracking carries on with the previous text.
+  }
 };
 
 /** Stops location updates and closes the open session. */
