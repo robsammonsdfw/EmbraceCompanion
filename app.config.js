@@ -25,6 +25,8 @@ const config = {
     associatedDomains: [`applinks:${LINK_HOST}`],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSCameraUsageDescription:
+        'For a pulse check, the Companion reads the colour of your fingertip over the back camera and light. Nothing is recorded or saved.',
     },
   },
   android: {
@@ -35,8 +37,8 @@ const config = {
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
-    // Step counting on walks (Android 10+).
-    permissions: ['android.permission.ACTIVITY_RECOGNITION'],
+    // Steps on walks (Android 10+); the camera for the pulse check.
+    permissions: ['android.permission.ACTIVITY_RECOGNITION', 'android.permission.CAMERA'],
     intentFilters: [
       {
         action: 'VIEW',
@@ -77,6 +79,29 @@ const config = {
     ['expo-audio', { enableBackgroundPlayback: true, microphonePermission: false }],
     ['expo-sensors', { motionPermission: 'The Companion counts your steps during walks.' }],
     '@maplibre/maplibre-react-native',
+    // Heart-rate straps, with readings while the phone is locked during an activity.
+    [
+      'react-native-ble-plx',
+      {
+        isBackgroundEnabled: true,
+        modes: ['central'],
+        neverForLocation: true,
+        bluetoothAlwaysPermission:
+          'The Companion connects to your heart-rate monitor and reads your heart rate during activities you start.',
+      },
+    ],
+    // Listening to your music for its beat. Recording only: no extra background
+    // mode or Android service (expo-audio already keeps spoken cues going).
+    [
+      'react-native-audio-api',
+      {
+        iosBackgroundMode: false,
+        androidForegroundService: false,
+        androidPermissions: ['android.permission.RECORD_AUDIO'],
+        iosMicrophonePermission:
+          'The Companion listens to your music for a few seconds to find its beat. Nothing is recorded or saved.',
+      },
+    ],
   ],
   experiments: {
     reactCompiler: true,

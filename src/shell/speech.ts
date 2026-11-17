@@ -19,6 +19,15 @@ export const prepareAudio = () => {
   return prepared;
 };
 
+/**
+ * Puts the Companion's audio setup back after something else changed it (the
+ * microphone in micListen.ts), so speech keeps playing locked and lowers music.
+ */
+export const restoreAudio = async () => {
+  prepared = null;
+  await prepareAudio();
+};
+
 /** Speaks with the phone's own voice. */
 export const speak = async (text: string, opts: { rate?: number; language?: string } = {}) => {
   await prepareAudio();

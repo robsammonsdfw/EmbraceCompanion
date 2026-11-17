@@ -4,6 +4,7 @@
 import * as Location from 'expo-location';
 import { Pedometer } from 'expo-sensors';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { VisionCamera } from 'react-native-vision-camera';
 
 export type PermissionResult = 'granted' | 'denied' | 'blocked';
 
@@ -32,4 +33,12 @@ export const ensureMotion = async (): Promise<PermissionResult> => {
   const asked = await Pedometer.requestPermissionsAsync();
   if (asked.granted) return 'granted';
   return asked.canAskAgain ? 'denied' : 'blocked';
+};
+
+/** The back camera, for the pulse check (PulseCamera.tsx). */
+export const ensureCamera = async (): Promise<PermissionResult> => {
+  const status = VisionCamera.cameraPermissionStatus;
+  if (status === 'authorized') return 'granted';
+  if (status === 'denied' || status === 'restricted') return 'blocked';
+  return (await VisionCamera.requestCameraPermission()) ? 'granted' : 'blocked';
 };
