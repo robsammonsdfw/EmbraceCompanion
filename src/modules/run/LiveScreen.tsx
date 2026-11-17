@@ -41,7 +41,6 @@ const gpsChip = (accuracy: number | null, ready: boolean, lastFixAt: number | nu
 
 export default function LiveScreen() {
   const live = useLive();
-  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   // Screen-on mode: on by default for rides, off for the rest; the member's last choice per kind is kept.
   const kind = live?.engine.kind ?? null;
@@ -82,7 +81,7 @@ export default function LiveScreen() {
 
   const stop = async () => {
     setBusy(true);
-    try { await finishActivity(); } finally { setBusy(false); setConfirming(false); }
+    try { await finishActivity(); } finally { setBusy(false); }
   };
   const discard = () =>
     Alert.alert('Discard this activity?', "It won't be saved, and it can't be brought back.", [
@@ -126,19 +125,16 @@ export default function LiveScreen() {
 
       {/* Pause, then Resume and Stop: pinned, large enough for gloves. */}
       <View style={st.controls}>
-        {confirming ? (
-          <Panel>
-            <Text style={st.question}>Finish this activity?</Text>
-            <Text style={{ color: ink.dim, fontSize: 15, textAlign: 'center' }}>{formatClock(e.elapsedTime)} · {distanceText(e)} {distUnit(e.cfg.unit)}</Text>
-            <DarkButton title="Finish and save" onPress={stop} bg={ink.teal} fg="#042F2E" style={st.tall} disabled={busy} />
-            <DarkButton title="Keep going" onPress={() => setConfirming(false)} style={st.tall} disabled={busy} />
-            <DarkButton title="Discard" onPress={discard} fg={ink.rose} disabled={busy} />
-          </Panel>
-        ) : e.isPaused ? (
-          <Row>
-            <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg="#042F2E" style={st.control} textStyle={st.controlText} />
-            <DarkButton title="Stop" onPress={() => setConfirming(true)} bg={ink.red} fg="#FFFFFF" style={st.control} textStyle={st.controlText} />
-          </Row>
+        {e.isPaused ? (
+          // As on iStride: Pause, then Stop finishes and saves. Pausing first is
+          // the guard against a stray tap, so there's no extra question.
+          <View style={{ gap: 8 }}>
+            <Row>
+              <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg="#042F2E" style={st.control} textStyle={st.controlText} disabled={busy} />
+              <DarkButton title={busy ? 'Saving…' : 'Stop'} onPress={stop} bg={ink.red} fg="#FFFFFF" style={st.control} textStyle={st.controlText} disabled={busy} />
+            </Row>
+            <DarkButton title="Discard this activity" onPress={discard} fg={ink.dim} disabled={busy} style={{ minHeight: 40, paddingVertical: 6, borderWidth: 0, backgroundColor: 'transparent' }} textStyle={{ fontSize: 12 }} />
+          </View>
         ) : (
           <DarkButton title="Pause" onPress={pause} bg="#FFFFFF" fg="#000000" style={st.control} textStyle={st.controlText} />
         )}
@@ -163,6 +159,17 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
     clearLive();
     if (to) void openLink(to); else router.replace('/');
   };
+  // Saved: straight back to iStride on this activity's report, as if it had
+  // been tracked there. No tap.
+  const reportUrl = done ? `${RUN_APP_URL}?section=report&run=${runId}` : null;
+  useEffect(() => {
+    if (!reportUrl) return;
+    forgetActivity(clientRunId);
+    void openLink(reportUrl);
+    // The Companion goes back to its first page behind iStride.
+    const t = setTimeout(() => { clearLive(); router.replace('/'); }, 1500);
+    return () => clearTimeout(t);
+  }, [reportUrl, clientRunId]);
 
   return (
     <SafeAreaView style={st.page} edges={['bottom', 'left', 'right']}>
@@ -177,7 +184,7 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
         )}
         <Panel style={failed ? { borderColor: ink.red } : undefined}>
           <Text style={{ color: ink.text, fontSize: 18, fontWeight: '900' }}>
-            {done ? 'Saved' : failed ? "This activity hasn't saved" : waiting ? 'Saved on your phone' : 'Saving…'}
+            {done ? 'Saved. Opening your report in iStride…' : failed ? "This activity hasn't saved" : waiting ? 'Saved on your phone' : 'Saving…'}
           </Text>
           <Text style={{ color: ink.dim, fontSize: 15, lineHeight: 21 }}>
             {done ? 'Your report is ready in iStride: your heart rate after the activity, the AI coach, your gear and photos.'
@@ -188,7 +195,7 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
           {failed && <DarkButton title="Try again" onPress={() => retryUpload(clientRunId)} bg={ink.red} fg="#FFFFFF" style={st.tall} />}
         </Panel>
         {done
-          ? <DarkButton title="Done" onPress={() => leave(`${RUN_APP_URL}?section=report&run=${runId}`)} bg={ink.teal} fg="#042F2E" style={st.control} textStyle={st.controlText} />
+          ? <DarkButton title="Open my report" onPress={() => leave(reportUrl)} bg={ink.teal} fg="#042F2E" style={st.control} textStyle={st.controlText} />
           : <DarkButton title="Close" onPress={() => leave(null)} style={st.tall} />}
         {!done && <Text style={{ color: ink.faint, fontSize: 13, textAlign: 'center' }}>You can close this. The activity stays on your phone until it has uploaded, and shows under Activity when it has.</Text>}
       </ScrollView>
