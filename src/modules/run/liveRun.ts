@@ -13,7 +13,7 @@ import { Platform } from 'react-native';
 
 import { istride } from '@/shell/api';
 import type { LngLat } from '@/shell/ActivityMap';
-import { activeSession, resumeTracking, startTracking, stopTracking } from '@/shell/location';
+import { activeSession, resumeTracking, startTracking, stopTracking, updateNotice } from '@/shell/location';
 import { ensureAndroidNotifications } from '@/shell/permissions';
 import { prepareAudio } from '@/shell/speech';
 import { startSteps, type StepCounter } from '@/shell/steps';
@@ -167,6 +167,8 @@ const step = () => {
   l.ticks += 1;
   if (l.ticks % 2 === 0) readSteps(l, now);
   if (l.ticks % 5 === 0) markAlive(l.activity.clientRunId, now, activeSteps(l));
+  // Android's notification: time, distance and pace, about every 10 seconds (only while the app is on screen).
+  if (l.ticks % 10 === 0) void updateNotice(trackingNotice(l.activity.setup.mode, l.engine));
   if (now - l.lastHeartbeat >= HEARTBEAT_MS) heartbeat(l);
   emit();
 };
