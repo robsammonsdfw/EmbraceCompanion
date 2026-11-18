@@ -2,8 +2,20 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["85GPQ25KC4.ai.embracehealth.companion"],
-        "components": [{ "/": "/*", "comment": "Every go.embracehealth.ai link opens the EmbraceHealthAI Companion" }]
+        "appIDs": [
+          "85GPQ25KC4.ai.embracehealth.companion"
+        ],
+        "components": [
+          {
+            "/": "/support*",
+            "exclude": true,
+            "comment": "The support page stays a web page"
+          },
+          {
+            "/": "/*",
+            "comment": "Every other go.embracehealth.ai link opens the EmbraceHealthAI Companion"
+          }
+        ]
       }
     ]
   }

@@ -69,6 +69,7 @@ export default function RootLayout() {
         <Stack.Screen name="run/start" options={{ title: 'Activity' }} />
         <Stack.Screen name="run/live" options={{ title: 'Activity' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="delete-account" options={{ title: 'Delete account' }} />
         <Stack.Screen name="+not-found" options={{ headerShown: false }} />
       </Stack>
 

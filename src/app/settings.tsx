@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import { Pedometer } from 'expo-sensors';
@@ -91,6 +92,7 @@ export default function Settings() {
       </Card>
 
       <Button kind="danger" icon="log-out-outline" title="Sign out" onPress={confirmSignOut} />
+      <Button kind="ghost" icon="trash-outline" title="Delete my account" onPress={() => router.push('/delete-account')} />
 
       <Body style={s.version}>
         EmbraceHealthAI Companion {Constants.expoConfig?.version}

@@ -44,7 +44,9 @@ export function SignIn({ notice }: { notice?: string | null }) {
     } catch (e) {
       setError(e instanceof HttpError && e.status === 401
         ? 'That email and password don’t match an EmbraceHealthAI account.'
-        : 'Couldn’t reach EmbraceHealthAI. Check your connection and try again.');
+        : e instanceof HttpError && e.status === 403
+          ? e.message // e.g. the account is being deleted
+          : 'Couldn’t reach EmbraceHealthAI. Check your connection and try again.');
     } finally {
       setBusy(false);
     }
