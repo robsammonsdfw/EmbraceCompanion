@@ -196,6 +196,7 @@ export const PulseCheck: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: ink.bg, padding: 14, gap: 12 }}>
       <Text style={{ color: ink.text, fontSize: 24, fontWeight: '900' }}>Check your pulse</Text>
+      <Text style={{ color: ink.dim, fontSize: 13 }}>For fitness use only. Not a medical device.</Text>
       {phase === 'ask' && <PermissionCard kind="camera" onReady={() => { setPref('perm.camera', 'granted'); begin(); }} />}
       {phase === 'measuring' && (
         <>
@@ -216,7 +217,7 @@ export const PulseCheck: React.FC = () => {
           <Text style={[s.big, { fontSize: 96, lineHeight: 100, letterSpacing: 0, color: ink.rose }]}>{result.bpm}</Text>
           <Text style={[s.bigUnit, { color: ink.dim }]}>beats a minute</Text>
           <Text style={{ color: ink.dim, fontSize: 14, textAlign: 'center' }}>
-            {result.confidence < 0.5 ? 'The signal was weak, so treat this as a rough reading. ' : ''}It counts as your heart rate for the next two minutes. An estimate, not a medical measurement.
+            {result.confidence < 0.5 ? 'The signal was weak, so treat this as a rough reading. ' : ''}It counts as your heart rate for the next two minutes. A fitness estimate, not a medical measurement.
           </Text>
         </Panel>
       )}

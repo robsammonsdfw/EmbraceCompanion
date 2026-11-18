@@ -12,7 +12,7 @@ const config = {
   owner: 'rsammons',
   name: 'EmbraceHealthAI Companion',
   slug: 'embracehealthai-companion',
-  version: '0.1.0',
+  version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   // For development builds only. The web apps never open the Companion with
@@ -27,7 +27,7 @@ const config = {
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSCameraUsageDescription:
-        'For a pulse check, the Companion reads the colour of your fingertip over the back camera and light. Nothing is recorded or saved.',
+        'For a pulse check, the Companion reads the colour of your fingertip over the back camera and light. Nothing is recorded or saved. For fitness use only, not a medical device.',
     },
   },
   android: {

@@ -34,7 +34,7 @@ const COPY = {
   camera: {
     icon: 'camera' as IconName,
     title: 'Allow the camera',
-    body: 'For a pulse check, rest a fingertip over the back camera and light. The Companion reads the colour changes in your fingertip. Nothing is recorded or saved.',
+    body: 'For a pulse check, rest a fingertip over the back camera and light. The Companion reads the colour changes in your fingertip. Nothing is recorded or saved. For fitness use only, not a medical device.',
     ask: ensureCamera,
   },
   microphone: {
