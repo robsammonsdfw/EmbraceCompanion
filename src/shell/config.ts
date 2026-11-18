@@ -11,8 +11,10 @@ export const MAIN_APP_URL = 'https://app.embracehealth.ai/';
 export const RUN_APP_URL = 'https://run.embracehealth.ai/';
 
 /**
- * CARTO basemap key (VITE_CARTO_API_KEY in the run.embracehealth.ai Amplify
- * app). It's in iStride's web pages already, so it isn't secret. Without it
+ * CARTO basemap key: the same value as VITE_CARTO_API_KEY in the
+ * run.embracehealth.ai Amplify app. It comes from the EAS environment variable
+ * EXPO_PUBLIC_CARTO_API_KEY, written into the app when it's built or updated.
+ * It's visible in iStride's web pages anyway, so it isn't a secret. Without it
  * the map tiles carry CARTO's "API key required" watermark.
  */
-export const CARTO_API_KEY = '';
+export const CARTO_API_KEY = process.env.EXPO_PUBLIC_CARTO_API_KEY ?? '';
