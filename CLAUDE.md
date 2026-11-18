@@ -35,3 +35,17 @@ never hand-edit `ios/` or `android/`.
   listed there. `npx expo install` can't reach Expo's servers from Claude's workspace.
 - Never put a sign-in token in a URL. Never store one outside `expo-secure-store`.
 - Secrets are EAS environment variables, never committed.
+
+## Look: light and dark
+The app has a light and a dark theme (`src/shell/theme.ts`). The member picks Automatic, Light or
+Dark in Settings.
+- **Shell screens:** use `useTheme()` for colours and `themed((t) => StyleSheet.create(...))` for
+  style sheets. Use the shared pieces in `src/shell/ui.tsx`: Screen, Card, GradientCard, Button,
+  ListRow, Segmented, Hero, Stat.
+- **Run module live screen:** read colours from `ink`, and make style sheets with
+  `runStyles(() => StyleSheet.create(...))` (both in `src/modules/run/parts.tsx`). `<RunThemed>`
+  keeps them current.
+- **Never hard-code a colour.** Every colour comes from the theme, except white text on a vivid
+  fill, which stays white in both themes.
+- **Numbers and headlines** use `font.display` (Barlow Condensed ExtraBold Italic). Don't combine
+  it with `fontWeight` or `fontStyle`.

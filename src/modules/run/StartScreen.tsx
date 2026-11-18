@@ -19,8 +19,8 @@ import { ActivityMap } from '@/shell/ActivityMap';
 import { RUN_APP_URL } from '@/shell/config';
 import { finish as openLink, safeReturnTo } from '@/shell/links';
 import { PermissionCard } from '@/shell/PermissionCard';
-import { colors, radius } from '@/shell/theme';
-import { Body, Button, Card, Label, Screen, Title } from '@/shell/ui';
+import { font, radius, themed, useTheme } from '@/shell/theme';
+import { Body, Button, Card, GradientCard, Ionicons, Label, Screen, Title, type IconName } from '@/shell/ui';
 import { retryUpload, useUpload } from '@/shell/uploads';
 
 import { activityLabel, EXERCISE_MODES, kindOfMode, modeTitle, RUN_MODES } from './calc/activityTypes';
@@ -44,6 +44,18 @@ const SUBTITLE: Record<RunMode, string> = {
   [RunMode.CYCLING]: 'Speed, Climbing & Ride Burn',
   [RunMode.WALKING]: 'Steps, Pace & Distance',
   [RunMode.HEART_WALK]: 'Pulse & Zone 2 Training',
+};
+/** Each mode's icon on the tiles. */
+const ICON: Record<RunMode, IconName> = {
+  [RunMode.ACADEMY]: 'school',
+  [RunMode.TRAIL]: 'trail-sign',
+  [RunMode.TRACK]: 'stopwatch',
+  [RunMode.ENDURANCE]: 'infinite',
+  [RunMode.CASUAL]: 'flame',
+  [RunMode.HIIT]: 'flash',
+  [RunMode.CYCLING]: 'bicycle',
+  [RunMode.WALKING]: 'footsteps',
+  [RunMode.HEART_WALK]: 'heart',
 };
 const ALL_MODES: RunMode[] = [...RUN_MODES, ...EXERCISE_MODES.filter((m) => !RUN_MODES.includes(m))];
 
@@ -105,6 +117,8 @@ function UploadRow({ a }: { a: Activity }) {
 type Ask = 'location' | 'motion' | null;
 
 export default function StartScreen() {
+  const styles = useStyles();
+  const t = useTheme();
   const params = useLocalSearchParams<{ setup?: string; mode?: string; return_to?: string }>();
   const setupId = first(params.setup) ?? null;
   const linkMode = (() => { const m = String(first(params.mode) ?? '').toUpperCase(); return isRunMode(m) ? m : null; })();
@@ -185,10 +199,18 @@ export default function StartScreen() {
       {loading ? (
         <Card><Body muted>Getting your setup from iStride…</Body></Card>
       ) : setup ? (
-        <Card>
-          <Label>{kind === 'run' ? `${name} run` : activityLabel(setup.mode)}</Label>
-          <Title>{name}</Title>
-          <Body muted>{SUBTITLE[setup.mode]}</Body>
+        <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <GradientCard style={{ borderRadius: 0 }}>
+            <View style={styles.heroRow}>
+              <View style={styles.heroIcon}><Ionicons name={ICON[setup.mode]} size={26} color="#FFFFFF" /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.heroLabel}>{kind === 'run' ? `${name} run` : activityLabel(setup.mode)}</Text>
+                <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>{name}</Text>
+              </View>
+            </View>
+            <Text style={styles.heroNote}>{SUBTITLE[setup.mode]}</Text>
+          </GradientCard>
+          <View style={styles.setupBody}>
           {setup.planned_route.length > 1 && (
             <ActivityMap route={[]} planned={setup.planned_route.map(([lat, lng]) => [lng, lat])} basemap="voyager" follow={false} style={{ height: 180 }} />
           )}
@@ -204,6 +226,7 @@ export default function StartScreen() {
               {setup.gear_names.kit && <Body>Wearing: {setup.gear_names.kit}</Body>}
             </View>
           )}
+          </View>
         </Card>
       ) : (
         <>
@@ -212,23 +235,32 @@ export default function StartScreen() {
               <Body>Your setup from iStride couldn&apos;t be found (they last a day). You can start with the usual defaults: no route, no target, your default gear.</Body>
             </Card>
           )}
-          <Card>
-            <Label>Activity</Label>
-            <View style={styles.tiles}>
-              {ALL_MODES.map((m) => (
-                <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: m === mode }} onPress={() => setMode(m)}
-                  style={({ pressed }) => [styles.tile, m === mode && styles.tileOn, pressed && { opacity: 0.8 }]}>
-                  <Text style={[styles.tileTitle, m === mode && { color: '#fff' }]}>{modeTitle(m)}</Text>
-                  <Text style={[styles.tileNote, m === mode && { color: colors.tealSoft }]}>{SUBTITLE[m]}</Text>
+          <Label>Choose an activity</Label>
+          <View style={styles.tiles}>
+            {ALL_MODES.map((m) => {
+              const on = m === mode;
+              return (
+                <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setMode(m)}
+                  style={({ pressed }) => [styles.tile, on && styles.tileOn, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}>
+                  <View style={[styles.tileIcon, on && styles.tileIconOn]}>
+                    <Ionicons name={ICON[m]} size={20} color={on ? t.onAccent : t.accent} />
+                  </View>
+                  <Text style={[styles.tileTitle, on && styles.tileTextOn]} numberOfLines={1}>{modeTitle(m)}</Text>
+                  <Text style={[styles.tileNote, on && styles.tileNoteOn]} numberOfLines={2}>{SUBTITLE[m]}</Text>
                 </Pressable>
-              ))}
-            </View>
+              );
+            })}
+          </View>
+          <Card>
             <View style={styles.switchRow}>
-              <Body>Kilometers</Body>
+              <View style={{ flex: 1 }}>
+                <Body>Kilometers</Body>
+                <Body muted style={{ fontSize: 13 }}>Off shows miles.</Body>
+              </View>
               <Switch value={unit === 'metric'} onValueChange={(v) => { const u: Unit = v ? 'metric' : 'imperial'; setUnit(u); setPref('unit', u); }}
-                trackColor={{ true: colors.teal, false: colors.line }} />
+                trackColor={{ true: t.accent, false: t.sunken }} />
             </View>
-            <Body muted>No route, no target and your default gear, the same as starting on iStride with nothing chosen. To pick a route, gear or a goal, start from iStride.</Body>
+            <Body muted style={{ fontSize: 13 }}>No route, no target and your default gear, the same as starting on iStride with nothing chosen. To pick a route, gear or a goal, start from iStride.</Body>
           </Card>
         </>
       )}
@@ -240,7 +272,7 @@ export default function StartScreen() {
               <Body>Spoken cues</Body>
               <Body muted>Splits and coaching through your headphones, with the phone locked.</Body>
             </View>
-            <Switch value={cuesOn} onValueChange={setCuesOn} trackColor={{ true: colors.teal, false: colors.line }} />
+            <Switch value={cuesOn} onValueChange={setCuesOn} trackColor={{ true: t.accent, false: t.sunken }} />
           </View>
         </Card>
       )}
@@ -257,7 +289,7 @@ export default function StartScreen() {
       {/* One activity at a time: an interrupted one is resumed, finished or discarded first (the card above). */}
       {!loading && ask === null && !interruptedActivity() && (
         <Help id="companion.start">
-          <Button title={`Start ${activityLabel(chosen).toLowerCase()}`} onPress={() => { void start(); }} busy={busy} />
+          <Button icon="play" title={`Start ${activityLabel(chosen).toLowerCase()}`} onPress={() => { void start(); }} busy={busy} style={{ minHeight: 64 }} />
         </Help>
       )}
       {returnTo && <Button kind="secondary" title="Back to iStride" onPress={() => { void openLink(returnTo); }} disabled={busy} />}
@@ -266,12 +298,22 @@ export default function StartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themed((t) => StyleSheet.create({
   rows: { gap: 2, marginTop: 4 },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tile: { width: '48%', flexGrow: 1, backgroundColor: colors.page, borderRadius: radius.button, borderWidth: 1, borderColor: colors.line, padding: 12, gap: 2 },
-  tileOn: { backgroundColor: colors.teal, borderColor: colors.teal },
-  tileTitle: { fontSize: 17, fontWeight: '800', color: colors.ink },
-  tileNote: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  setupBody: { padding: 18, gap: 10 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  heroIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  heroLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1.4, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' },
+  heroTitle: { fontFamily: font.display, fontSize: 40, lineHeight: 42, color: '#FFFFFF', textTransform: 'uppercase' },
+  heroNote: { fontSize: 14, color: 'rgba(255,255,255,0.92)' },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: { width: '48%', flexGrow: 1, backgroundColor: t.card, borderRadius: radius.tile, padding: 14, gap: 6, ...t.raised },
+  tileOn: { backgroundColor: t.accent },
+  tileIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  tileIconOn: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  tileTitle: { fontFamily: font.displayBold, fontSize: 20, letterSpacing: 0.5, color: t.text, textTransform: 'uppercase' },
+  tileTextOn: { color: t.onAccent },
+  tileNote: { fontSize: 12, fontWeight: '600', color: t.dim },
+  tileNoteOn: { color: t.onAccent, opacity: 0.85 },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-});
+}));

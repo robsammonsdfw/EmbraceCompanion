@@ -1,80 +1,190 @@
-// Shared building blocks for Companion screens.
+// Shared building blocks for Companion screens, in light and dark (theme.ts).
 
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius } from './theme';
+import { font, radius, themed, useTheme } from './theme';
 
-export const Screen: React.FC<{ children: React.ReactNode; scroll?: boolean }> = ({ children, scroll = true }) => (
-  <SafeAreaView style={styles.page} edges={['bottom', 'left', 'right']}>
-    {scroll ? <ScrollView contentContainerStyle={styles.pad}>{children}</ScrollView> : <View style={[styles.pad, styles.fill]}>{children}</View>}
-  </SafeAreaView>
-);
+export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export const Card: React.FC<{ children: React.ReactNode; tone?: 'plain' | 'teal' | 'orange' | 'danger'; style?: ViewStyle }> = ({ children, tone = 'plain', style }) => (
-  <View style={[styles.card, tone === 'teal' && styles.teal, tone === 'orange' && styles.orange, tone === 'danger' && styles.danger, style]}>{children}</View>
-);
+const useStyles = themed((t) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: t.bg },
+  pad: { padding: 16, gap: 14, paddingBottom: 32 },
+  fill: { flex: 1 },
+  card: { backgroundColor: t.card, borderRadius: radius.card, padding: 18, gap: 10, ...t.raised },
+  title: { fontSize: 20, fontWeight: '800', color: t.text, letterSpacing: -0.3 },
+  hero: { fontFamily: font.display, fontSize: 40, lineHeight: 42, color: t.text, textTransform: 'uppercase' },
+  label: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', color: t.faint },
+  body: { fontSize: 15, lineHeight: 22, color: t.text },
+  muted: { color: t.dim },
+  button: { borderRadius: radius.button, minHeight: 54, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, overflow: 'hidden' },
+  secondary: { backgroundColor: t.card, ...t.raised },
+  ghost: { backgroundColor: 'transparent' },
+  danger: { backgroundColor: t.red },
+  dim: { opacity: 0.55 },
+  buttonText: { color: t.onAccent, fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
+  secondaryText: { color: t.text },
+  ghostText: { color: t.accent },
+  dangerText: { color: '#FFFFFF' },
+  stat: { flex: 1, minWidth: '40%', gap: 2 },
+  statValue: { fontFamily: font.display, fontSize: 40, lineHeight: 42, color: t.text, fontVariant: ['tabular-nums'] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  rowIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accentSoft },
+  rowText: { flex: 1, gap: 2 },
+  rowTitle: { fontSize: 16, fontWeight: '700', color: t.text },
+  rowSub: { fontSize: 13, color: t.dim },
+  rowValue: { fontSize: 14, fontWeight: '700', color: t.dim },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: t.line, marginLeft: 54 },
+  segmented: { flexDirection: 'row', backgroundColor: t.sunken, borderRadius: 14, padding: 4, gap: 4 },
+  segment: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  segmentOn: { backgroundColor: t.card, ...t.raised },
+  segmentText: { fontSize: 14, fontWeight: '700', color: t.dim },
+  segmentTextOn: { color: t.text },
+}));
 
-export const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => <Text style={styles.title}>{children}</Text>;
-export const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => <Text style={styles.label}>{children}</Text>;
-export const Body: React.FC<{ children: React.ReactNode; muted?: boolean }> = ({ children, muted }) => (
-  <Text style={[styles.body, muted && styles.muted]}>{children}</Text>
-);
+export const Screen: React.FC<{ children: React.ReactNode; scroll?: boolean; style?: ViewStyle }> = ({ children, scroll = true, style }) => {
+  const s = useStyles();
+  return (
+    <SafeAreaView style={[s.page, style]} edges={['bottom', 'left', 'right']}>
+      {scroll
+        ? <ScrollView contentContainerStyle={s.pad} showsVerticalScrollIndicator={false}>{children}</ScrollView>
+        : <View style={[s.pad, s.fill]}>{children}</View>}
+    </SafeAreaView>
+  );
+};
+
+type Tone = 'plain' | 'teal' | 'orange' | 'danger';
+export const Card: React.FC<{ children: React.ReactNode; tone?: Tone; style?: ViewStyle }> = ({ children, tone = 'plain', style }) => {
+  const s = useStyles();
+  const t = useTheme();
+  const tint = tone === 'teal' ? t.accentSoft : tone === 'orange' ? t.orangeSoft : tone === 'danger' ? t.redSoft : null;
+  return (
+    <View style={[s.card, tint ? { backgroundColor: tint, shadowOpacity: 0, elevation: 0, borderWidth: 0 } : null, style]}>
+      {children}
+    </View>
+  );
+};
+
+/** A card filled with the brand gradient, for the one thing a screen is for. */
+export const GradientCard: React.FC<{ children: React.ReactNode; style?: ViewStyle; colors?: [string, string]; onPress?: () => void }> = ({ children, style, colors, onPress }) => {
+  const t = useTheme();
+  const body = (
+    <LinearGradient colors={colors ?? t.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[{ borderRadius: radius.card, padding: 22, gap: 8, overflow: 'hidden' }, style]}>
+      {/* A soft light in the corner, for depth. */}
+      <View pointerEvents="none" style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, right: -70, top: -90, backgroundColor: 'rgba(255,255,255,0.14)' }} />
+      {children}
+    </LinearGradient>
+  );
+  if (!onPress) return body;
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [{ borderRadius: radius.card }, t.raised, pressed && { transform: [{ scale: 0.985 }], opacity: 0.95 }]}>
+      {body}
+    </Pressable>
+  );
+};
+
+export const Title: React.FC<{ children: React.ReactNode; style?: TextStyle }> = ({ children, style }) => <Text style={[useStyles().title, style]}>{children}</Text>;
+/** Big condensed headline. */
+export const Hero: React.FC<{ children: React.ReactNode; style?: TextStyle }> = ({ children, style }) => <Text style={[useStyles().hero, style]}>{children}</Text>;
+export const Label: React.FC<{ children: React.ReactNode; style?: TextStyle }> = ({ children, style }) => <Text style={[useStyles().label, style]}>{children}</Text>;
+export const Body: React.FC<{ children: React.ReactNode; muted?: boolean; style?: TextStyle }> = ({ children, muted, style }) => {
+  const s = useStyles();
+  return <Text style={[s.body, muted && s.muted, style]}>{children}</Text>;
+};
 
 export const Button: React.FC<{
   title: string;
   onPress: () => void;
-  kind?: 'primary' | 'secondary' | 'danger';
+  kind?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  icon?: IconName;
   busy?: boolean;
   disabled?: boolean;
-}> = ({ title, onPress, kind = 'primary', busy, disabled }) => (
-  <Pressable
-    accessibilityRole="button"
-    onPress={onPress}
-    disabled={disabled || busy}
-    style={({ pressed }) => [
-      styles.button,
-      kind === 'primary' && styles.primary,
-      kind === 'secondary' && styles.secondary,
-      kind === 'danger' && styles.dangerButton,
-      (pressed || disabled) && styles.dim,
-    ]}
-  >
-    {busy ? (
-      <ActivityIndicator color={kind === 'secondary' ? colors.tealDark : '#fff'} />
-    ) : (
-      <Text style={[styles.buttonText, kind === 'secondary' && styles.secondaryText]}>{title}</Text>
-    )}
-  </Pressable>
-);
+  style?: ViewStyle;
+}> = ({ title, onPress, kind = 'primary', icon, busy, disabled, style }) => {
+  const s = useStyles();
+  const t = useTheme();
+  const fg = kind === 'primary' ? t.onAccent : kind === 'danger' ? '#FFFFFF' : kind === 'ghost' ? t.accent : t.text;
+  const inner = busy
+    ? <ActivityIndicator color={fg} />
+    : <>
+        {icon && <Ionicons name={icon} size={20} color={fg} />}
+        <Text style={[s.buttonText, kind === 'secondary' && s.secondaryText, kind === 'ghost' && s.ghostText, kind === 'danger' && s.dangerText]}>{title}</Text>
+      </>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      disabled={disabled || busy}
+      style={({ pressed }) => [
+        s.button,
+        kind === 'secondary' && s.secondary,
+        kind === 'ghost' && s.ghost,
+        kind === 'danger' && s.danger,
+        (pressed || disabled) && s.dim,
+        style,
+      ]}
+    >
+      {kind === 'primary' && (
+        <LinearGradient colors={t.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+      )}
+      {inner}
+    </Pressable>
+  );
+};
 
-export const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View style={styles.stat}>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.label}>{label}</Text>
-  </View>
-);
+export const Stat: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => {
+  const s = useStyles();
+  return (
+    <View style={s.stat}>
+      <Text style={[s.statValue, color ? { color } : null]}>{value}</Text>
+      <Text style={s.label}>{label}</Text>
+    </View>
+  );
+};
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.page },
-  pad: { padding: 16, gap: 14 },
-  fill: { flex: 1 },
-  card: { backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line, padding: 16, gap: 8 },
-  teal: { backgroundColor: colors.tealSoft, borderColor: colors.tealSoft },
-  orange: { backgroundColor: colors.orangeSoft, borderColor: colors.orangeSoft },
-  danger: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
-  title: { fontSize: 18, fontWeight: '800', color: colors.ink },
-  label: { fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', color: colors.muted },
-  body: { fontSize: 15, lineHeight: 21, color: colors.ink },
-  muted: { color: colors.muted },
-  button: { borderRadius: radius.button, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', minHeight: 50 },
-  primary: { backgroundColor: colors.teal },
-  secondary: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
-  dangerButton: { backgroundColor: colors.danger },
-  dim: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  secondaryText: { color: colors.tealDark },
-  stat: { flex: 1, minWidth: '40%', gap: 2 },
-  statValue: { fontSize: 26, fontWeight: '800', color: colors.ink, fontVariant: ['tabular-nums'] },
-});
+/** A settings-style row: icon, title, optional subtitle, value or chevron. */
+export const ListRow: React.FC<{ icon: IconName; title: string; sub?: string; value?: string; tint?: string; onPress?: () => void; last?: boolean }> = ({ icon, title, sub, value, tint, onPress, last }) => {
+  const s = useStyles();
+  const t = useTheme();
+  const content = (
+    <View style={s.row}>
+      <View style={[s.rowIcon, tint ? { backgroundColor: `${tint}22` } : null]}><Ionicons name={icon} size={20} color={tint ?? t.accent} /></View>
+      <View style={s.rowText}>
+        <Text style={s.rowTitle}>{title}</Text>
+        {sub ? <Text style={s.rowSub}>{sub}</Text> : null}
+      </View>
+      {value ? <Text style={s.rowValue}>{value}</Text> : null}
+      {onPress ? <Ionicons name="chevron-forward" size={18} color={t.faint} /> : null}
+    </View>
+  );
+  return (
+    <>
+      {onPress
+        ? <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => pressed && { opacity: 0.6 }}>{content}</Pressable>
+        : content}
+      {!last && <View style={s.separator} />}
+    </>
+  );
+};
+
+/** Two to four choices side by side (Automatic / Light / Dark). */
+export function Segmented<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  const s = useStyles();
+  return (
+    <View style={s.segmented}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable key={o.value} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.value)} style={[s.segment, on && s.segmentOn]}>
+            <Text style={[s.segmentText, on && s.segmentTextOn]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export { Ionicons };

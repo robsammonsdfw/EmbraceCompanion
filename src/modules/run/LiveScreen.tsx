@@ -11,6 +11,8 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+
+import { font } from '@/shell/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RUN_APP_URL } from '@/shell/config';
@@ -27,24 +29,28 @@ import type { ScreenId } from './helper/guides';
 import { Help, HelperLayer, HelperPill, useHelperScreen } from './helper/ui';
 import { activeSteps, clearLive, discardActivity, finishActivity, pause, resume, useLive } from './liveRun';
 import { closePanel, usePanel } from './panels';
-import { Chip, DarkButton, distUnit, ink, Panel, Row, s } from './parts';
+import { Chip, DarkButton, distUnit, ink, Panel, Row, runStyles, RunThemed, s } from './parts';
 import { RecoveryCard } from './RecoveryCard';
 import { forgetActivity, getPref, setPref } from './store';
 
 const KEEP_AWAKE = 'run-dashboard';
 
 const gpsChip = (accuracy: number | null, ready: boolean, lastFixAt: number | null, now: number, paused: boolean) => {
-  if (paused) return { text: 'Paused', bg: '#422006', fg: ink.amber };
-  if (lastFixAt === null || accuracy === null) return { text: 'Finding GPS…', bg: '#422006', fg: ink.amber };
-  if (!ready) return { text: `Finding GPS… ±${Math.round(accuracy)}m`, bg: '#422006', fg: ink.amber };
-  if (now - lastFixAt > 30_000) return { text: 'GPS waiting', bg: '#27272A', fg: ink.dim };
-  if (accuracy <= 10) return { text: `GPS strong ±${Math.round(accuracy)}m`, bg: '#052E2B', fg: ink.tealSoft };
-  if (accuracy <= 25) return { text: `GPS good ±${Math.round(accuracy)}m`, bg: '#052E2B', fg: '#5EEAD4' };
-  if (accuracy <= 50) return { text: `GPS fair ±${Math.round(accuracy)}m`, bg: '#422006', fg: ink.amber };
-  return { text: `GPS weak ±${Math.round(accuracy)}m`, bg: '#450A0A', fg: '#FCA5A5' };
+  if (paused) return { text: 'Paused', bg: ink.amberBg, fg: ink.amber };
+  if (lastFixAt === null || accuracy === null) return { text: 'Finding GPS…', bg: ink.amberBg, fg: ink.amber };
+  if (!ready) return { text: `Finding GPS… ±${Math.round(accuracy)}m`, bg: ink.amberBg, fg: ink.amber };
+  if (now - lastFixAt > 30_000) return { text: 'GPS waiting', bg: ink.line, fg: ink.dim };
+  if (accuracy <= 10) return { text: `GPS strong ±${Math.round(accuracy)}m`, bg: ink.tealBg, fg: ink.tealSoft };
+  if (accuracy <= 25) return { text: `GPS good ±${Math.round(accuracy)}m`, bg: ink.tealBg, fg: ink.tealSoft };
+  if (accuracy <= 50) return { text: `GPS fair ±${Math.round(accuracy)}m`, bg: ink.amberBg, fg: ink.amber };
+  return { text: `GPS weak ±${Math.round(accuracy)}m`, bg: ink.redBg, fg: ink.red };
 };
 
 export default function LiveScreen() {
+  return <RunThemed><LiveDashboard /></RunThemed>;
+}
+
+function LiveDashboard() {
   const live = useLive();
   const [busy, setBusy] = useState(false);
   // Screen-on mode: on by default for rides, off for the rest; the member's last choice per kind is kept.
@@ -76,7 +82,7 @@ export default function LiveScreen() {
       <SafeAreaView style={st.page} edges={['bottom', 'left', 'right']}>
         <Stack.Screen options={{ title: 'Activity' }} />
         <View style={st.pad}>
-          <RecoveryCard dark onNothing={() => router.replace('/run/start')} />
+          <RecoveryCard onNothing={() => router.replace('/run/start')} />
         </View>
       </SafeAreaView>
     );
@@ -128,7 +134,7 @@ export default function LiveScreen() {
 
       <View style={{ flex: 1 }}>
       <ScrollView ref={scrollRef} contentContainerStyle={st.body} scrollEventThrottle={64} onScroll={(ev) => noteScrollY(ev.nativeEvent.contentOffset.y)}>
-        <HelperPill dark />
+        <HelperPill />
         <Help id="companion.screenOn">
         <Row style={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ color: ink.dim, fontSize: 14, fontWeight: '800', flex: 1 }}>Keep the screen on, big numbers</Text>
@@ -159,7 +165,7 @@ export default function LiveScreen() {
           <View style={{ gap: 8 }}>
             <Row>
               <Help id="runs.live.pause" style={{ flex: 1 }}>
-                <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg="#042F2E" style={st.controlIn} textStyle={st.controlText} disabled={busy} />
+                <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg={ink.onTeal} style={st.controlIn} textStyle={st.controlText} disabled={busy} />
               </Help>
               <Help id="runs.live.stop" style={{ flex: 1 }}>
                 <DarkButton title={busy ? 'Saving…' : 'Stop'} onPress={stop} bg={ink.red} fg="#FFFFFF" style={st.controlIn} textStyle={st.controlText} disabled={busy} />
@@ -169,7 +175,7 @@ export default function LiveScreen() {
           </View>
         ) : (
           <Help id="runs.live.pause">
-            <DarkButton title="Pause" onPress={pause} bg="#FFFFFF" fg="#000000" style={st.controlIn} textStyle={st.controlText} />
+            <DarkButton title="Pause" onPress={pause} bg={ink.text} fg={ink.bg} style={st.controlIn} textStyle={st.controlText} />
           </Help>
         )}
       </View>
@@ -210,7 +216,7 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
     <SafeAreaView style={st.page} edges={['bottom', 'left', 'right']}>
       <Stack.Screen options={{ title }} />
       <ScrollView contentContainerStyle={st.body}>
-        <Text style={[st.question, { fontSize: 34, color: ink.tealSoft, fontStyle: 'italic', textTransform: 'uppercase' }]}>{activityLabel(live?.activity.setup.mode)} finished</Text>
+        <Text style={[st.question, { fontFamily: font.display, fontSize: 44, color: ink.tealSoft, textTransform: 'uppercase' }]}>{activityLabel(live?.activity.setup.mode)} finished</Text>
         {e && (
           <Row>
             <Panel style={{ flex: 1, alignItems: 'center' }}><Text style={[s.tileLabel, { color: ink.faint }]}>Distance</Text><Text style={st.total}>{distanceText(e)} <Text style={{ fontSize: 16, color: ink.faint }}>{distUnit(e.cfg.unit)}</Text></Text></Panel>
@@ -230,7 +236,7 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
           {failed && <DarkButton title="Try again" onPress={() => retryUpload(clientRunId)} bg={ink.red} fg="#FFFFFF" style={st.tall} />}
         </Panel>
         {done
-          ? <DarkButton title="Open my report" onPress={() => leave(reportUrl)} bg={ink.teal} fg="#042F2E" style={st.control} textStyle={st.controlText} />
+          ? <DarkButton title="Open my report" onPress={() => leave(reportUrl)} bg={ink.teal} fg={ink.onTeal} style={st.control} textStyle={st.controlText} />
           : <DarkButton title="Close" onPress={() => leave(null)} style={st.tall} />}
         {!done && <Text style={{ color: ink.faint, fontSize: 13, textAlign: 'center' }}>You can close this. The activity stays on your phone until it has uploaded, and shows under Activity when it has.</Text>}
       </ScrollView>
@@ -238,17 +244,17 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
   );
 }
 
-const st = StyleSheet.create({
+const st = runStyles(() => StyleSheet.create({
   page: { flex: 1, backgroundColor: ink.bg },
   pad: { padding: 16, gap: 14 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#18181B' },
-  clock: { color: ink.text, fontSize: 32, fontWeight: '900', fontStyle: 'italic', fontVariant: ['tabular-nums'] },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: ink.panel, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ink.line },
+  clock: { color: ink.text, fontFamily: font.display, fontSize: 38, lineHeight: 42, fontVariant: ['tabular-nums'] },
   body: { padding: 12, gap: 12, paddingBottom: 24 },
-  controls: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)', backgroundColor: ink.bg },
-  control: { flex: 1, minHeight: 84, borderRadius: 24 },
-  controlIn: { minHeight: 84, borderRadius: 24 },
-  controlText: { fontSize: 26, fontStyle: 'italic' },
+  controls: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ink.line, backgroundColor: ink.bg },
+  control: { flex: 1, minHeight: 84, borderRadius: 26 },
+  controlIn: { minHeight: 84, borderRadius: 26, borderWidth: 0 },
+  controlText: { fontFamily: font.display, fontSize: 32, fontWeight: 'normal', letterSpacing: 1 },
   tall: { minHeight: 64 },
   question: { color: ink.text, fontSize: 24, fontWeight: '900', textAlign: 'center' },
-  total: { color: ink.text, fontSize: 36, fontWeight: '900', fontVariant: ['tabular-nums'] },
-});
+  total: { color: ink.text, fontFamily: font.display, fontSize: 44, lineHeight: 48, fontVariant: ['tabular-nums'] },
+}));

@@ -5,10 +5,11 @@
 // ============================================================================
 
 import { Camera, GeoJSONSource, Layer, Map, type StyleSpecification } from '@maplibre/maplibre-react-native';
+import { useMemo } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { CARTO_API_KEY } from './config';
-import { colors } from './theme';
+import { useTheme } from './theme';
 
 /** [longitude, latitude], MapLibre's order. */
 export type LngLat = [number, number];
@@ -48,7 +49,7 @@ const line = (coords: LngLat[]) => ({
 export function ActivityMap({
   route,
   planned = [],
-  basemap = 'dark',
+  basemap,
   follow = true,
   style,
 }: {
@@ -56,27 +57,31 @@ export function ActivityMap({
   route: LngLat[];
   /** The planned route, if one was chosen. */
   planned?: LngLat[];
+  /** Defaults to Dark Matter in dark mode and Voyager in light. */
   basemap?: keyof typeof BASEMAPS;
   /** Keep the member centered, pointing the way they're moving. */
   follow?: boolean;
   style?: ViewStyle;
 }) {
+  const t = useTheme();
+  const map = basemap ?? (t.mode === 'dark' ? 'dark' : 'voyager');
+  const mapStyle = useMemo(() => styleFor(map), [map]);
   const last = route.length ? route[route.length - 1] : planned[0];
   return (
     <View style={[styles.box, style]}>
-      <Map style={StyleSheet.absoluteFill} mapStyle={styleFor(basemap)} logo={false} compass={false} attribution>
+      <Map style={StyleSheet.absoluteFill} mapStyle={mapStyle} logo={false} compass={false} attribution>
         <Camera
           initialViewState={last ? { center: last, zoom: 15 } : { zoom: 2 }}
           trackUserLocation={follow ? 'course' : undefined}
         />
         {planned.length > 1 && (
           <GeoJSONSource id="planned" data={line(planned)}>
-            <Layer id="planned-line" type="line" paint={{ 'line-color': '#94A3B8', 'line-width': 4, 'line-dasharray': [2, 2] }} />
+            <Layer id="planned-line" type="line" paint={{ 'line-color': t.faint, 'line-width': 4, 'line-dasharray': [2, 2] }} />
           </GeoJSONSource>
         )}
         {route.length > 1 && (
           <GeoJSONSource id="route" data={line(route)}>
-            <Layer id="route-line" type="line" paint={{ 'line-color': colors.teal, 'line-width': 5 }} layout={{ 'line-cap': 'round', 'line-join': 'round' }} />
+            <Layer id="route-line" type="line" paint={{ 'line-color': t.accent, 'line-width': 5 }} layout={{ 'line-cap': 'round', 'line-join': 'round' }} />
           </GeoJSONSource>
         )}
       </Map>
@@ -85,5 +90,5 @@ export function ActivityMap({
 }
 
 const styles = StyleSheet.create({
-  box: { overflow: 'hidden', borderRadius: 20, backgroundColor: '#1E293B', minHeight: 220 },
+  box: { overflow: 'hidden', borderRadius: 24, backgroundColor: '#1E293B', minHeight: 220 },
 });

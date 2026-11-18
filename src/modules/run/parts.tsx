@@ -1,17 +1,59 @@
-// The live dashboard's building blocks: dark, with big numbers readable at
-// arm's length outdoors, and controls large enough for gloves.
+// The live dashboard's building blocks, in light and dark (the shell's
+// theme.ts): big condensed numbers readable at arm's length outdoors, and
+// controls large enough for gloves.
+//
+// `ink` (colours) and the style sheets made with runStyles() are refreshed for
+// the current theme by <RunThemed>, which wraps the live screen and remounts
+// it when the theme changes, so everything below can read them directly.
 
-import React from 'react';
+import React, { Fragment } from 'react';
 import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
+
+import { dark, font, useTheme, type Palette } from '@/shell/theme';
 
 import type { Unit } from './calc/types';
 import { Help } from './helper/ui';
 
-export const ink = {
-  bg: '#000000', panel: '#18181B', line: '#27272A', text: '#FFFFFF', dim: '#A1A1AA', faint: '#71717A',
-  teal: '#14B8A6', tealSoft: '#2DD4BF', orange: '#FB923C', red: '#DC2626', amber: '#FBBF24', sky: '#38BDF8',
-  green: '#34D399', rose: '#F87171', indigo: '#818CF8', purple: '#A855F7',
-} as const;
+const inkFor = (t: Palette) => {
+  const d = t.mode === 'dark';
+  return {
+    mode: t.mode,
+    bg: t.bg, panel: t.card, line: d ? '#27272A' : 'rgba(15,23,42,0.10)', text: t.text, dim: t.dim, faint: t.faint,
+    teal: d ? '#14B8A6' : '#0D9488', tealSoft: t.accent, onTeal: t.onAccent,
+    orange: t.orange, red: d ? '#DC2626' : '#DC2626', amber: t.amber, sky: t.sky, green: t.green, rose: t.rose,
+    indigo: t.indigo, purple: t.purple, cyan: t.cyan,
+    // Tinted backgrounds for chips, notices and buttons.
+    amberBg: t.amberSoft, tealBg: t.accentSoft, redBg: t.redSoft, orangeBg: t.orangeSoft, purpleBg: t.purpleSoft,
+    cyanBg: t.cyanSoft, greenBg: t.greenSoft, skyBg: t.skySoft, indigoBg: d ? 'rgba(129,140,248,0.16)' : 'rgba(79,70,229,0.10)',
+    raised: t.raised,
+  };
+};
+
+/** The dashboard's colours for the current theme. */
+export const ink = inkFor(dark);
+
+const sheets: (() => void)[] = [];
+/** A style sheet rebuilt from `ink` whenever the theme changes. */
+export function runStyles<T extends object>(make: () => T): T {
+  const sheet = make();
+  sheets.push(() => { Object.assign(sheet, make()); });
+  return sheet;
+}
+
+let applied: Palette = dark;
+const apply = (t: Palette) => {
+  if (applied === t) return;
+  applied = t;
+  Object.assign(ink, inkFor(t));
+  sheets.forEach((rebuild) => rebuild());
+};
+
+/** Wraps the live screen: applies the theme, and starts it afresh when the theme changes. */
+export function RunThemed({ children }: { children: React.ReactNode }) {
+  const t = useTheme();
+  apply(t);
+  return <Fragment key={t.mode}>{children}</Fragment>;
+}
 
 export const distUnit = (u: Unit) => (u === 'imperial' ? 'mi' : 'km');
 export const speedUnit = (u: Unit) => (u === 'imperial' ? 'MPH' : 'KPH');
@@ -32,7 +74,7 @@ export const Row: React.FC<{ children: React.ReactNode; style?: ViewStyle }> = (
 
 export const Big: React.FC<{ value: string; unit: string; color?: string; valueColor?: string; size?: number }> = ({ value, unit, color = ink.teal, valueColor = ink.text, size = 104 }) => (
   <View style={{ alignItems: 'center' }}>
-    <Text style={[s.big, { fontSize: size, lineHeight: size * 1.02, color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+    <Text style={[s.big, { fontSize: size, lineHeight: size * 1.06, color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
     <Text style={[s.bigUnit, { color }]}>{unit}</Text>
   </View>
 );
@@ -85,7 +127,7 @@ export const FuelGauge: React.FC<{
         <Text style={s.tileSub}>Fat stores ~{unit === 'imperial' ? `${Math.round(fasted!.fat_kg * 2.20462)} lb` : `${Math.round(fasted!.fat_kg)} kg`}</Text>
       )}
       <Help id="runs.live.gel" style={{ alignSelf: 'stretch' }}>
-        <DarkButton title="+ Gel" onPress={onGel} bg="#422006" fg="#FDE047" style={s.gaugeButton} />
+        <DarkButton title="+ Gel" onPress={onGel} bg={ink.amberBg} fg={ink.amber} style={s.gaugeButton} />
       </Help>
     </Help>
   );
@@ -98,36 +140,36 @@ export const HydrationGauge: React.FC<{ lost: number; intake: number; hasWeight:
   const low = hasWeight && net < -500;
   return (
     <Help id="runs.live.fluid" style={s.gauge}>
-      <Text style={[s.tileLabel, { color: '#22D3EE' }]}>Fluid</Text>
-      <View style={s.bar}><View style={[s.barFill, { width: `${pct}%`, backgroundColor: low ? '#0891B2' : '#22D3EE' }]} /></View>
+      <Text style={[s.tileLabel, { color: ink.cyan }]}>Fluid</Text>
+      <View style={s.bar}><View style={[s.barFill, { width: `${pct}%`, backgroundColor: low ? ink.sky : ink.cyan }]} /></View>
       <Text style={s.gaugeValue}>{hasWeight ? Math.abs(Math.round(net)) : '--'}</Text>
       <Text style={s.tileSub}>{hasWeight ? `Est. mL ${net < 0 ? 'deficit' : 'surplus'}` : 'Add weight for est.'}</Text>
       <Help id="runs.live.sip" style={{ alignSelf: 'stretch' }}>
-        <DarkButton title="+ Sip" onPress={onSip} bg="#083344" fg="#67E8F9" style={s.gaugeButton} />
+        <DarkButton title="+ Sip" onPress={onSip} bg={ink.cyanBg} fg={ink.cyan} style={s.gaugeButton} />
       </Help>
     </Help>
   );
 };
 
-export const s = StyleSheet.create({
-  panel: { backgroundColor: ink.panel, borderRadius: 22, borderWidth: 1, borderColor: ink.line, padding: 14, gap: 10 },
+export const s = runStyles(() => StyleSheet.create({
+  panel: { backgroundColor: ink.panel, borderRadius: 24, borderWidth: ink.mode === 'dark' ? 1 : 0, borderColor: ink.line, padding: 16, gap: 10, ...ink.raised },
   row: { flexDirection: 'row', gap: 8 },
-  tile: { flex: 1, minWidth: 0, backgroundColor: ink.panel, borderRadius: 18, borderWidth: 1, borderColor: ink.line, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
-  tileLabel: { fontSize: 11, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' },
-  tileValue: { fontSize: 24, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  tile: { flex: 1, minWidth: 0, backgroundColor: ink.panel, borderRadius: 20, borderWidth: ink.mode === 'dark' ? 1 : 0, borderColor: ink.line, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', ...ink.raised },
+  tileLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
+  tileValue: { fontFamily: font.display, fontSize: 30, lineHeight: 34, fontVariant: ['tabular-nums'] },
   tileSub: { fontSize: 11, fontWeight: '700', color: ink.faint, textAlign: 'center' },
-  big: { color: ink.text, fontWeight: '900', fontStyle: 'italic', fontVariant: ['tabular-nums'], letterSpacing: -3 },
-  bigUnit: { fontSize: 20, fontWeight: '900', fontStyle: 'italic', textTransform: 'uppercase' },
-  nudge: { width: 52, height: 48, borderRadius: 12, backgroundColor: ink.line, alignItems: 'center', justifyContent: 'center' },
-  nudgeText: { color: '#E4E4E7', fontSize: 20, fontWeight: '900' },
+  big: { color: ink.text, fontFamily: font.display, fontVariant: ['tabular-nums'], letterSpacing: -1 },
+  bigUnit: { fontFamily: font.display, fontSize: 22, textTransform: 'uppercase', letterSpacing: 1 },
+  nudge: { width: 52, height: 48, borderRadius: 14, backgroundColor: ink.mode === 'dark' ? ink.line : 'rgba(15,23,42,0.06)', alignItems: 'center', justifyContent: 'center' },
+  nudgeText: { color: ink.text, fontSize: 20, fontWeight: '900' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   chipText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  button: { borderRadius: 14, minHeight: 50, paddingVertical: 12, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ink.line },
-  buttonText: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
-  gauge: { flex: 1, backgroundColor: ink.panel, borderRadius: 18, borderWidth: 1, borderColor: ink.line, padding: 10, alignItems: 'center', gap: 4 },
-  gaugeValue: { color: ink.text, fontSize: 26, fontWeight: '900', fontStyle: 'italic', fontVariant: ['tabular-nums'] },
+  button: { borderRadius: 18, minHeight: 52, paddingVertical: 12, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderWidth: ink.mode === 'dark' ? 1 : 0, borderColor: ink.line },
+  buttonText: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.6 },
+  gauge: { flex: 1, backgroundColor: ink.panel, borderRadius: 20, borderWidth: ink.mode === 'dark' ? 1 : 0, borderColor: ink.line, padding: 12, alignItems: 'center', gap: 4, ...ink.raised },
+  gaugeValue: { color: ink.text, fontFamily: font.display, fontSize: 32, lineHeight: 36, fontVariant: ['tabular-nums'] },
   gaugeButton: { alignSelf: 'stretch', marginTop: 4 },
-  bar: { alignSelf: 'stretch', height: 10, borderRadius: 5, backgroundColor: ink.line, overflow: 'hidden' },
+  bar: { alignSelf: 'stretch', height: 10, borderRadius: 5, backgroundColor: ink.mode === 'dark' ? ink.line : 'rgba(15,23,42,0.08)', overflow: 'hidden' },
   barFill: { height: 10, borderRadius: 5 },
-});
+}));

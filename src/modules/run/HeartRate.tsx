@@ -98,7 +98,7 @@ export const HeartRateSource: React.FC<{ e: RunEngine }> = ({ e }) => {
             <Row>
               <DarkButton title="✕" onPress={() => setMode('idle')} style={{ flex: 1 }} />
               <Help id="exercise.live.hrSet" style={{ flex: 2 }}>
-                <DarkButton title="Set" onPress={() => { enterHeartRate(bpm, 'manual'); setMode('idle'); }} bg={ink.teal} fg="#042F2E" />
+                <DarkButton title="Set" onPress={() => { enterHeartRate(bpm, 'manual'); setMode('idle'); }} bg={ink.teal} fg={ink.onTeal} />
               </Help>
             </Row>
           </>
@@ -199,12 +199,12 @@ export const PulseCheck: React.FC = () => {
       {phase === 'ask' && <PermissionCard kind="camera" onReady={() => { setPref('perm.camera', 'granted'); begin(); }} />}
       {phase === 'measuring' && (
         <>
-          <Text style={{ color: '#D4D4D8', fontSize: 16, lineHeight: 22 }}>
+          <Text style={{ color: ink.dim, fontSize: 16, lineHeight: 22 }}>
             Stand still. Rest a fingertip over the back camera and its light, pressing gently, for about {MEASURE_SECONDS} seconds.
           </Text>
           <PulseCamera active torch onSample={onSample} onError={(m) => { setMessage(m); setPhase('error'); }} style={{ height: 120, borderRadius: 16, overflow: 'hidden' }} />
           <Panel style={{ alignItems: 'center' }}>
-            <Text style={[s.big, { fontSize: 84, lineHeight: 88, letterSpacing: 0, fontStyle: 'normal' }]}>{remaining}</Text>
+            <Text style={[s.big, { fontSize: 84, lineHeight: 88, letterSpacing: 0 }]}>{remaining}</Text>
             <Text style={{ fontSize: 16, fontWeight: '900', color: quality === 'good' ? ink.green : ink.amber }}>
               {quality === 'good' ? 'Good signal — hold still' : quality === 'too-dark' ? 'Too dark — cover the light too' : 'Cover the lens with your fingertip'}
             </Text>
@@ -213,9 +213,9 @@ export const PulseCheck: React.FC = () => {
       )}
       {phase === 'done' && result && (
         <Panel style={{ alignItems: 'center' }}>
-          <Text style={[s.big, { fontSize: 96, lineHeight: 100, letterSpacing: 0, fontStyle: 'normal', color: ink.rose }]}>{result.bpm}</Text>
+          <Text style={[s.big, { fontSize: 96, lineHeight: 100, letterSpacing: 0, color: ink.rose }]}>{result.bpm}</Text>
           <Text style={[s.bigUnit, { color: ink.dim }]}>beats a minute</Text>
-          <Text style={{ color: '#D4D4D8', fontSize: 14, textAlign: 'center' }}>
+          <Text style={{ color: ink.dim, fontSize: 14, textAlign: 'center' }}>
             {result.confidence < 0.5 ? 'The signal was weak, so treat this as a rough reading. ' : ''}It counts as your heart rate for the next two minutes. An estimate, not a medical measurement.
           </Text>
         </Panel>
@@ -223,7 +223,7 @@ export const PulseCheck: React.FC = () => {
       {phase === 'error' && <Panel><Text style={{ color: ink.orange, fontSize: 16, lineHeight: 22 }}>{message}</Text></Panel>}
       <View style={{ flex: 1 }} />
       {(phase === 'done' || phase === 'error') && <DarkButton title="Check again" onPress={begin} style={{ minHeight: 56 }} />}
-      <DarkButton title={phase === 'done' ? 'Done' : 'Close'} onPress={closePanel} bg={phase === 'done' ? ink.teal : ink.panel} fg={phase === 'done' ? '#042F2E' : ink.text} style={{ minHeight: 64 }} />
+      <DarkButton title={phase === 'done' ? 'Done' : 'Close'} onPress={closePanel} bg={phase === 'done' ? ink.teal : ink.panel} fg={phase === 'done' ? ink.onTeal : ink.text} style={{ minHeight: 64 }} />
     </View>
   );
 };

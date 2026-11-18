@@ -23,7 +23,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager, State, type Device, type Subscription } from 'react-native-ble-plx';
 
 import type { PermissionResult } from './permissions';
-import { db } from './storage';
+import { getShellPref, setShellPref } from './storage';
 
 const HR_SERVICE = '0000180d-0000-1000-8000-00805f9b34fb';
 const HR_MEASUREMENT = '00002a37-0000-1000-8000-00805f9b34fb';
@@ -50,21 +50,11 @@ export const onHeartRate = (cb: (bpm: number, t: number) => void) => {
 
 // ---- The strap used last time ------------------------------------------------------
 
-let prefsReady = false;
-const prefs = () => {
-  if (!prefsReady) {
-    db().execSync('CREATE TABLE IF NOT EXISTS shell_prefs (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
-    prefsReady = true;
-  }
-  return db();
-};
-
 export const lastHeartRateDevice = (): HeartRateDevice | null => {
-  const row = prefs().getFirstSync<{ value: string }>("SELECT value FROM shell_prefs WHERE key = 'hr_device'");
-  try { return row ? (JSON.parse(row.value) as HeartRateDevice) : null; } catch { return null; }
+  const raw = getShellPref('hr_device');
+  try { return raw ? (JSON.parse(raw) as HeartRateDevice) : null; } catch { return null; }
 };
-const remember = (d: HeartRateDevice) =>
-  prefs().runSync("INSERT OR REPLACE INTO shell_prefs (key, value) VALUES ('hr_device', ?)", JSON.stringify(d));
+const remember = (d: HeartRateDevice) => setShellPref('hr_device', JSON.stringify(d));
 
 // ---- Permission and Bluetooth state -----------------------------------------------------
 

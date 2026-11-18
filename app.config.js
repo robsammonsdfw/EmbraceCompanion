@@ -18,7 +18,8 @@ const config = {
   // For development builds only. The web apps never open the Companion with
   // this scheme; they use https://go.embracehealth.ai links.
   scheme: 'embracehealthai',
-  userInterfaceStyle: 'light',
+  // Light and dark: the app follows the phone unless the member picks one in Settings.
+  userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: BUNDLE_ID,
     supportsTablet: false,
@@ -57,6 +58,7 @@ const config = {
         backgroundColor: '#FFFFFF',
         image: './assets/images/splash-icon.png',
         imageWidth: 180,
+        dark: { backgroundColor: '#000000', image: './assets/images/splash-icon.png' },
       },
     ],
     [

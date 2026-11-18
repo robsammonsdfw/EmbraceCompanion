@@ -5,6 +5,8 @@
 import React, { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View, type ViewStyle } from 'react-native';
 
+import { useTheme } from '@/shell/theme';
+
 import {
   anchorMounted, anchorRef, anchorTapped, currentStep, dismissGuide, guideBlocked, guidesFor, guideStatus, loadHelper, nextStep,
   registerAnchor, scrollInfo, setHelperEnabled, setHelperScreen, startGuide, unregisterAnchor, useHelper,
@@ -121,7 +123,8 @@ export const HelperLayer: React.FC = () => {
 };
 
 /** The Helper button: opens the switch and this screen's walkthroughs. */
-export const HelperPill: React.FC<{ dark?: boolean }> = ({ dark }) => {
+export const HelperPill: React.FC = () => {
+  const dark = useTheme().mode === 'dark';
   const helper = useHelper();
   const [open, setOpen] = useState(false);
   const on = helper.enabled === true;

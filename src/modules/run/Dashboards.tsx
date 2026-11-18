@@ -21,6 +21,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { ActivityMap, type LngLat } from '@/shell/ActivityMap';
+import { font } from '@/shell/theme';
 import { ensureMicrophone, listenPcm } from '@/shell/micListen';
 import { PermissionCard } from '@/shell/PermissionCard';
 
@@ -157,7 +158,7 @@ const planned = (e: RunEngine): LngLat[] => e.plannedRoute.map((p) => [p.lng, p.
 const RouteMap: React.FC<{ e: RunEngine; line: LngLat[] }> = ({ e, line }) => (
   <Help id="runs.live.map">
     <View style={{ gap: 8 }}>
-      <ActivityMap route={line} planned={planned(e)} basemap="dark" follow style={{ height: 260 }} />
+      <ActivityMap route={line} planned={planned(e)} follow style={{ height: 260 }} />
       <Help id="runs.live.mapExpand">
         <DarkButton title="Expand" onPress={() => openPanel('map')} fg={ink.dim} />
       </Help>
@@ -180,7 +181,7 @@ const MapToggle: React.FC<{ e: RunEngine; line: LngLat[] }> = ({ e, line }) => {
 /** The map, full screen (Expand). Pause stays under it. */
 export const MapPanel: React.FC<{ e: RunEngine; line: LngLat[] }> = ({ e, line }) => (
   <View style={{ flex: 1, backgroundColor: ink.bg }}>
-    <ActivityMap route={line} planned={planned(e)} basemap="dark" follow style={{ flex: 1, borderRadius: 0 }} />
+    <ActivityMap route={line} planned={planned(e)} follow style={{ flex: 1, borderRadius: 0 }} />
     <View style={{ padding: 12 }}>
       <Help id="runs.live.mapClose">
         <DarkButton title="Close" onPress={closePanel} />
@@ -205,15 +206,15 @@ const OffRoute: React.FC<{ e: RunEngine }> = ({ e }) => {
   if (!e.isOffRoute || e.plannedRoute.length === 0) return null;
   return (
     <Help id="runs.live.offRoute">
-      <Panel style={{ backgroundColor: '#431407', borderColor: '#F97316' }}>
+      <Panel style={{ backgroundColor: ink.orangeBg, borderColor: ink.orange }}>
         <Text style={{ color: ink.text, fontSize: 16, fontWeight: '900' }}>You&apos;re off your route</Text>
-        <Text style={{ color: '#FED7AA', fontSize: 13 }}>Reroute for a new way to the finish.</Text>
+        <Text style={{ color: ink.orange, fontSize: 13 }}>Reroute for a new way to the finish.</Text>
         <Row>
           <Help id="runs.live.reroute" style={{ flex: 1 }}>
-            <DarkButton title={busy ? 'Finding…' : 'Reroute'} disabled={busy} bg="#F97316" fg="#000000"
+            <DarkButton title={busy ? 'Finding…' : 'Reroute'} disabled={busy} bg={ink.orange} fg="#FFFFFF"
               onPress={() => { setBusy(true); void reroute().finally(() => setBusy(false)); }} />
           </Help>
-          <DarkButton title="Dismiss" onPress={dismissOffRoute} bg="#7C2D12" fg="#FED7AA" style={{ flex: 1 }} disabled={busy} />
+          <DarkButton title="Dismiss" onPress={dismissOffRoute} bg={ink.orangeBg} fg={ink.orange} style={{ flex: 1 }} disabled={busy} />
         </Row>
       </Panel>
     </Help>
@@ -247,11 +248,11 @@ const Weather: React.FC<{ setup: RunSetup }> = ({ setup }) =>
     </Help>
   ) : null;
 
-const RELATION = {
-  headwind: { bg: '#3B1113', fg: ink.rose, arrow: '↓', label: 'Headwind' },
-  tailwind: { bg: '#062B28', fg: ink.tealSoft, arrow: '↑', label: 'Tailwind' },
-  crosswind: { bg: '#3A2A06', fg: ink.amber, arrow: '→', label: 'Crosswind' },
-} as const;
+const relation = () => ({
+  headwind: { bg: ink.redBg, fg: ink.rose, arrow: '↓', label: 'Headwind' },
+  tailwind: { bg: ink.tealBg, fg: ink.tealSoft, arrow: '↑', label: 'Tailwind' },
+  crosswind: { bg: ink.amberBg, fg: ink.amber, arrow: '→', label: 'Crosswind' },
+});
 
 /** The full route weather report, as iStride shows it (components/RouteWeatherPanel.tsx WeatherReport). */
 export const WeatherPanel: React.FC<{ setup: RunSetup }> = ({ setup }) => {
@@ -294,14 +295,15 @@ export const WeatherPanel: React.FC<{ setup: RunSetup }> = ({ setup }) => {
         </Help>
         <Panel>
           {summary.advice.map((line, i) => (
-            <Text key={line} style={{ color: '#E4E4E7', fontSize: 15, lineHeight: 21 }}>
+            <Text key={line} style={{ color: ink.text, fontSize: 15, lineHeight: 21 }}>
               {i === 0 && <Text style={{ fontWeight: '900', color: ink.text }}>Race plan · </Text>}{line}
             </Text>
           ))}
         </Panel>
         <Text style={[s.tileLabel, { color: ink.faint }]}>By stretch</Text>
         {segments.map((sg) => {
-          const r = RELATION[sg.relation] ?? RELATION.crosswind;
+          const rel = relation();
+          const r = rel[sg.relation] ?? rel.crosswind;
           return (
             <View key={`${sg.fromUnit}-${sg.toUnit}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: r.bg, borderRadius: 14, padding: 12 }}>
               <View style={{ width: 70 }}>
@@ -311,7 +313,7 @@ export const WeatherPanel: React.FC<{ setup: RunSetup }> = ({ setup }) => {
                 <Text style={{ color: ink.dim, fontSize: 12 }}>{new Date(sg.atTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#E4E4E7', fontSize: 13 }}>Heading {sg.travelCompass} · wind from {sg.windFromCompass} at {sg.windSpeed} {unitLabels.speed}</Text>
+                <Text style={{ color: ink.text, fontSize: 13 }}>Heading {sg.travelCompass} · wind from {sg.windFromCompass} at {sg.windSpeed} {unitLabels.speed}</Text>
                 <Text style={{ color: ink.dim, fontSize: 12 }}>{sg.temp}{unitLabels.temp} · gusts {sg.windGust}{sg.confidence === 'reduced' ? ' · terrain may alter wind here' : ''}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
@@ -393,16 +395,16 @@ const SongPace: React.FC<{ e: RunEngine; cadence: number }> = ({ e, cadence }) =
         {askMic ? (
           <PermissionCard kind="microphone" onReady={() => { setPref('perm.microphone', 'granted'); setAskMic(false); void listen(); }} />
         ) : listening !== null ? (
-          <DarkButton title={`Listening… ${listening}s · tap to stop`} onPress={() => abort.current?.abort()} bg="#2E1065" fg="#DDD6FE" style={{ minHeight: 64 }} />
+          <DarkButton title={`Listening… ${listening}s · tap to stop`} onPress={() => abort.current?.abort()} bg={ink.purpleBg} fg={ink.purple} style={{ minHeight: 64 }} />
         ) : (
           <>
-            {count === 0 && <DarkButton title="♪ Update pace to current song" onPress={() => { void listen(); }} bg="#2E1065" fg="#DDD6FE" style={{ minHeight: 64 }} />}
+            {count === 0 && <DarkButton title="♪ Update pace to current song" onPress={() => { void listen(); }} bg={ink.purpleBg} fg={ink.purple} style={{ minHeight: 64 }} />}
             <DarkButton title={count > 0 ? `Tap on each beat · ${count}/${TAPS_NEEDED}` : 'Wearing headphones? Tap the beat instead'} onPress={tap}
-              bg={count > 0 ? '#2E1065' : 'transparent'} fg="#C4B5FD" style={count > 0 ? { minHeight: 64 } : { minHeight: 44, borderWidth: 0 }} textStyle={count > 0 ? undefined : { fontSize: 13 }} />
+              bg={count > 0 ? ink.purpleBg : 'transparent'} fg={ink.purple} style={count > 0 ? { minHeight: 64 } : { minHeight: 44, borderWidth: 0 }} textStyle={count > 0 ? undefined : { fontSize: 13 }} />
           </>
         )}
         {result && e.targetSpeed ? (
-          <Text style={{ color: '#DDD6FE', fontSize: 14, textAlign: 'center' }}>
+          <Text style={{ color: ink.purple, fontSize: 14, textAlign: 'center' }}>
             {result.bpm} beats a minute · {result.cadence} steps a minute · target pace now {calculatePace(e.targetSpeed, u)} /{distUnit(u)}
           </Text>
         ) : (
@@ -412,7 +414,7 @@ const SongPace: React.FC<{ e: RunEngine; cadence: number }> = ({ e, cadence }) =
           <Row style={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Text style={s.tileSub}>Not the right beat?</Text>
             {alternates.map((b) => (
-              <DarkButton key={b} title={`${b}`} onPress={() => use(b, [result.bpm, ...alternates].filter((x) => x !== b))} fg="#C4B5FD" style={{ minHeight: 40, paddingVertical: 6 }} />
+              <DarkButton key={b} title={`${b}`} onPress={() => use(b, [result.bpm, ...alternates].filter((x) => x !== b))} fg={ink.purple} style={{ minHeight: 40, paddingVertical: 6 }} />
             ))}
           </Row>
         )}
@@ -462,9 +464,9 @@ export const RunDash: React.FC<DashProps> = ({ e, setup, line, cadence, now }) =
       <OffRoute e={e} />
       {academy && (
         <Help id="runs.live.academy">
-        <Panel style={academy.phase?.kind === 'fast' ? { backgroundColor: '#1E1B4B', borderColor: ink.indigo } : undefined}>
+        <Panel style={academy.phase?.kind === 'fast' ? { backgroundColor: ink.indigoBg, borderColor: ink.indigo } : undefined}>
           <Row style={{ justifyContent: 'space-between' }}>
-            <Text style={[s.tileLabel, { color: '#A5B4FC' }]}>Academy session</Text>
+            <Text style={[s.tileLabel, { color: ink.indigo }]}>Academy session</Text>
             <Text style={[s.tileLabel, { color: ink.dim }]}>{academy.index === -1 ? 'Complete' : `${clockOf(Math.max(0, ACADEMY_TOTAL - e.elapsedTime))} left`}</Text>
           </Row>
           {academy.index === -1 || !academy.phase ? (
@@ -472,10 +474,10 @@ export const RunDash: React.FC<DashProps> = ({ e, setup, line, cadence, now }) =
           ) : (
             <>
               <Row style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Text style={{ color: ink.text, fontSize: 22, fontWeight: '900', fontStyle: 'italic' }}>{academy.phase.name}</Text>
+                <Text style={{ color: ink.text, fontFamily: font.display, fontSize: 28, textTransform: 'uppercase' }}>{academy.phase.name}</Text>
                 <Text style={[s.gaugeValue, { fontSize: 30 }]}>{clockOf(academy.remaining)}</Text>
               </Row>
-              <Text style={{ color: '#D4D4D8', fontSize: 14 }}>{academy.phase.cue}</Text>
+              <Text style={{ color: ink.dim, fontSize: 14 }}>{academy.phase.cue}</Text>
               {academy.next && <Text style={[s.tileLabel, { color: ink.faint }]}>Next: {academy.next.name}</Text>}
             </>
           )}
@@ -524,7 +526,7 @@ export const CasualDash: React.FC<DashProps> = ({ e, setup }) => {
   return (
     <>
       <Help id="runs.live.casual" style={{ alignItems: 'center', paddingVertical: 18 }}>
-        <Text style={[s.tileLabel, { color: '#D8B4FE', letterSpacing: 3 }]}>{setup.pause_weight_loss ? 'Calorie burn' : 'Weight loss mode'}</Text>
+        <Text style={[s.tileLabel, { color: ink.purple, letterSpacing: 3 }]}>{setup.pause_weight_loss ? 'Calorie burn' : 'Weight loss mode'}</Text>
         <Big value={e.cfg.body.weight > 0 ? String(total) : '--'} unit="Calories burned" color={ink.purple} size={128} />
       </Help>
       {/* Food burned off: not shown when weight loss is paused (never say why). */}
@@ -532,8 +534,8 @@ export const CasualDash: React.FC<DashProps> = ({ e, setup }) => {
         <Panel style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <Text style={{ fontSize: 48 }}>{food ? food.icon : '🔥'}</Text>
           <View style={{ flex: 1 }}>
-            <Text style={[s.tileLabel, { color: '#D8B4FE' }]}>Equivalent to</Text>
-            <Text style={{ color: ink.text, fontSize: 22, fontWeight: '900', fontStyle: 'italic' }}>{food ? `You burned a ${food.label}!` : 'Keep moving!'}</Text>
+            <Text style={[s.tileLabel, { color: ink.purple }]}>Equivalent to</Text>
+            <Text style={{ color: ink.text, fontFamily: font.display, fontSize: 28, textTransform: 'uppercase' }}>{food ? `You burned a ${food.label}!` : 'Keep moving!'}</Text>
           </View>
         </Panel>
       )}
@@ -605,7 +607,7 @@ export const HeartWalkDash: React.FC<DashProps> = ({ e, line, steps, now }) => {
   const fresh = hr?.fresh ? hr : null;
   const zone = fresh && maxHr ? zoneOf(fresh.bpm, maxHr) : null;
   const status = !fresh || !maxHr ? null : zone === tz ? 'in' : (zone ?? 0) > tz ? 'high' : 'low';
-  const color = fresh ? (zone ? ZONES[zone - 1].color : ink.rose) : '#52525B';
+  const color = fresh ? (zone ? ZONES[zone - 1].color : ink.rose) : ink.faint;
   return (
     <>
       <Help id="exercise.live.zone">
@@ -626,22 +628,22 @@ export const HeartWalkDash: React.FC<DashProps> = ({ e, line, steps, now }) => {
             </View>
           ))}
         </Row>
-        <View style={{ borderRadius: 16, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: status === 'in' ? '#052E16' : status === 'high' ? '#450A0A' : status === 'low' ? '#172554' : ink.bg }}>
-          <Text style={{ textAlign: 'center', fontSize: 19, fontWeight: '900', textTransform: 'uppercase', color: status === 'in' ? '#4ADE80' : status === 'high' ? ink.rose : status === 'low' ? '#93C5FD' : ink.dim }}>
+        <View style={{ borderRadius: 16, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: status === 'in' ? ink.greenBg : status === 'high' ? ink.redBg : status === 'low' ? ink.skyBg : ink.bg }}>
+          <Text style={{ textAlign: 'center', fontSize: 19, fontWeight: '900', textTransform: 'uppercase', color: status === 'in' ? ink.green : status === 'high' ? ink.rose : status === 'low' ? ink.sky : ink.dim }}>
             {status === 'in' ? `✓ In zone ${tz} — hold this pace`
               : status === 'high' ? 'Too hard — slow down'
               : status === 'low' ? `Below zone ${tz} — pick it up`
               : !maxHr ? 'Add your age or max HR in iStride for zones'
               : 'Connect a monitor or check your pulse to see your zone'}
           </Text>
-          {maxHr ? <Text style={[s.tileSub, { color: '#D4D4D8' }]}>Zone {tz} is {zoneRange(tz, maxHr).join('–')} bpm</Text> : null}
+          {maxHr ? <Text style={[s.tileSub, { color: ink.dim }]}>Zone {tz} is {zoneRange(tz, maxHr).join('–')} bpm</Text> : null}
         </View>
       </Panel>
       </Help>
       <HeartRateSource e={e} />
       <Help id="exercise.live.tiles">
       <Row>
-        <Tile label="In zone" accent={ink.rose} value={e.hrStats.n > 0 ? clockOf(e.hrStats.zones[tz]) : '--'} sub={e.hrStats.n > 0 ? `zone ${tz}` : 'monitor only'} color="#4ADE80" />
+        <Tile label="In zone" accent={ink.rose} value={e.hrStats.n > 0 ? clockOf(e.hrStats.zones[tz]) : '--'} sub={e.hrStats.n > 0 ? `zone ${tz}` : 'monitor only'} color={ink.green} />
         <Tile label="Pace" accent={ink.rose} value={calculatePace(shownSpeed(e), u, paceMax(e))} sub={`/${distUnit(u)}`} />
         <Tile label="Steps" accent={ink.rose} value={steps ? steps.toLocaleString() : '--'} />
         <Tile label="kcal" accent={ink.rose} value={kcal(e)} sub="burned" />
@@ -678,7 +680,11 @@ export const HiitDash: React.FC<DashProps> = ({ e, setup, line, now }) => {
   const phase = at?.phase ?? null;
   const mk = manual ? (e.hiitManual?.kind ?? null) : phase?.kind ?? null;
   const isWork = mk === 'work';
-  const bg = isWork ? '#9A3412' : mk === 'rest' ? '#115E59' : ink.panel;
+  // Work and rest light the card up in both themes; text on it stays white.
+  const vivid = mk === 'work' || mk === 'rest';
+  const bg = isWork ? '#C2410C' : mk === 'rest' ? '#0F766E' : ink.panel;
+  const onCard = vivid ? '#FFFFFF' : ink.text;
+  const onCardSoft = vivid ? 'rgba(255,255,255,0.82)' : ink.orange;
   const phaseSecs = manual ? (e.hiitManual ? Math.floor((now - e.hiitManual.since) / 1000) : 0) : phase && at ? phase.secs - at.remaining : 0;
   const sprints = e.intervals.filter((i) => i.type === 'SPRINT');
   const title = manual ? (e.hiitManual ? (isWork ? 'Sprint' : plan.restLabel) : 'Ready') : at && at.index === -1 ? 'Done' : phase?.label ?? 'Warm-up';
@@ -687,33 +693,33 @@ export const HiitDash: React.FC<DashProps> = ({ e, setup, line, now }) => {
     <>
       <Help id="exercise.live.hiitCard">
       <Panel style={{ backgroundColor: bg, alignItems: 'center' }}>
-        <Text style={[s.tileLabel, { color: '#FED7AA', letterSpacing: 2 }]}>
+        <Text style={[s.tileLabel, { color: onCardSoft, letterSpacing: 2 }]}>
           {manual ? (e.hiitManual ? `Round ${e.hiitManual.round}` : 'Tap to start your first sprint')
             : phase?.round ? `Round ${phase.round} of ${plan.rounds}` : at?.index === -1 ? 'Workout complete' : `${plan.rounds} ${plan.rounds === 1 ? 'sprint' : 'sprints'}`}
         </Text>
-        <Text style={{ color: ink.text, fontSize: 52, fontWeight: '900', fontStyle: 'italic', textTransform: 'uppercase' }} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
-        <Text style={[s.big, { fontSize: 96, lineHeight: 100, letterSpacing: 0, fontStyle: 'normal' }]}>
+        <Text style={{ color: onCard, fontFamily: font.display, fontSize: 60, lineHeight: 64, textTransform: 'uppercase' }} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+        <Text style={[s.big, { fontSize: 110, lineHeight: 116, letterSpacing: 0, color: onCard }]}>
           {manual ? clockOf(phaseSecs) : at && at.index >= 0 ? clockOf(at.remaining) : clockOf(0)}
         </Text>
         {!manual && phase && (
-          <View style={[s.bar, { backgroundColor: 'rgba(255,255,255,0.15)' }]}><View style={[s.barFill, { width: `${Math.min(100, (phaseSecs / phase.secs) * 100)}%`, backgroundColor: ink.text }]} /></View>
+          <View style={[s.bar, vivid && { backgroundColor: 'rgba(255,255,255,0.2)' }]}><View style={[s.barFill, { width: `${Math.min(100, (phaseSecs / phase.secs) * 100)}%`, backgroundColor: onCard }]} /></View>
         )}
         {!manual && at?.next && (
-          <Text style={[s.tileLabel, { color: '#FDE68A', fontSize: 14 }]}>Next: {at.next.label}{at.next.round ? ` ${at.next.round}` : ''} · {at.next.secs}s</Text>
+          <Text style={[s.tileLabel, { color: vivid ? '#FDE68A' : ink.amber, fontSize: 14 }]}>Next: {at.next.label}{at.next.round ? ` ${at.next.round}` : ''} · {at.next.secs}s</Text>
         )}
         {/* Rounds, changeable mid-workout (not once the cool-down starts). */}
         {!manual && phase && phase.kind !== 'cooldown' && (
           <Row style={{ alignItems: 'center', marginTop: 6 }}>
-            <Text style={[s.tileLabel, { color: '#FED7AA' }]}>Rounds</Text>
+            <Text style={[s.tileLabel, { color: onCardSoft }]}>Rounds</Text>
             <Nudge label="Fewer rounds" text="−" onPress={() => adjustHiitRounds(-1)} disabled={plan.rounds <= floor} />
-            <Text style={[s.gaugeValue, { fontSize: 30, width: 48, textAlign: 'center' }]}>{plan.rounds}</Text>
+            <Text style={[s.gaugeValue, { fontSize: 30, width: 48, textAlign: 'center', color: onCard }]}>{plan.rounds}</Text>
             <Nudge label="More rounds" text="+" onPress={() => adjustHiitRounds(1)} disabled={plan.rounds >= 40} />
           </Row>
         )}
         {manual && (
           <Help id="exercise.live.sprint" style={{ alignSelf: 'stretch' }}>
             <DarkButton title={isWork ? `Start ${plan.restLabel.toLowerCase()}` : 'Start sprint'} onPress={toggleHiit}
-              bg={isWork ? ink.teal : '#F97316'} fg="#09090B" style={{ minHeight: 72 }} textStyle={{ fontSize: 24, fontStyle: 'italic' }} />
+              bg={isWork ? ink.teal : ink.orange} fg="#FFFFFF" style={{ minHeight: 72 }} textStyle={{ fontFamily: font.display, fontSize: 30, fontWeight: 'normal' }} />
           </Help>
         )}
       </Panel>
@@ -733,9 +739,9 @@ export const HiitDash: React.FC<DashProps> = ({ e, setup, line, now }) => {
           <Row><Text style={[s.tileLabel, { flex: 2, color: ink.faint }]}>Interval</Text><Text style={[s.tileLabel, { flex: 1, color: ink.faint, textAlign: 'center' }]}>Time</Text><Text style={[s.tileLabel, { flex: 1, color: ink.faint, textAlign: 'center' }]}>Dist</Text><Text style={[s.tileLabel, { flex: 1, color: ink.faint, textAlign: 'right' }]}>Top</Text></Row>
           {e.intervals.slice().reverse().slice(0, 8).map((iv) => (
             <Row key={iv.id}>
-              <Text style={{ flex: 2, fontSize: 15, fontWeight: '900', color: iv.type === 'SPRINT' ? ink.orange : '#5EEAD4' }}>{iv.label ?? iv.type}{iv.round ? ` ${iv.round}` : ''}</Text>
-              <Text style={{ flex: 1, fontSize: 15, color: '#E4E4E7', textAlign: 'center' }}>{clockOf(iv.duration)}</Text>
-              <Text style={{ flex: 1, fontSize: 15, color: '#E4E4E7', textAlign: 'center' }}>{u === 'imperial' ? `${Math.round((iv.distance * METERS_TO_FEET) / 3)} yd` : `${Math.round(iv.distance)} m`}</Text>
+              <Text style={{ flex: 2, fontSize: 15, fontWeight: '900', color: iv.type === 'SPRINT' ? ink.orange : ink.tealSoft }}>{iv.label ?? iv.type}{iv.round ? ` ${iv.round}` : ''}</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: ink.text, textAlign: 'center' }}>{clockOf(iv.duration)}</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: ink.text, textAlign: 'center' }}>{u === 'imperial' ? `${Math.round((iv.distance * METERS_TO_FEET) / 3)} yd` : `${Math.round(iv.distance)} m`}</Text>
               {/* Top speed is a sprint's number: a recovery's "top" is just the sprint winding down. */}
               <Text style={{ flex: 1, fontSize: 15, color: ink.amber, textAlign: 'right' }}>{iv.type === 'SPRINT' ? formatSpeed(iv.maxSpeed, u) : '—'}</Text>
             </Row>
@@ -755,9 +761,9 @@ export const SimpleDash: React.FC<DashProps> = ({ e }) => {
   const ride = e.kind === 'ride';
   return (
     <View style={{ gap: 6, paddingVertical: 8 }}>
-      <Big value={ride ? formatSpeed(shownSpeed(e), u) : calculatePace(shownSpeed(e), u, paceMax(e))} unit={ride ? speedUnit(u) : `min / ${distUnit(u)}`} color="#FFFFFF" size={150} />
-      <Big value={distanceText(e)} unit={distUnit(u)} color="#FFFFFF" size={96} />
-      <Big value={formatClock(e.elapsedTime)} unit="time" color="#FFFFFF" size={96} />
+      <Big value={ride ? formatSpeed(shownSpeed(e), u) : calculatePace(shownSpeed(e), u, paceMax(e))} unit={ride ? speedUnit(u) : `min / ${distUnit(u)}`} color={ink.text} size={150} />
+      <Big value={distanceText(e)} unit={distUnit(u)} color={ink.text} size={96} />
+      <Big value={formatClock(e.elapsedTime)} unit="time" color={ink.text} size={96} />
     </View>
   );
 };

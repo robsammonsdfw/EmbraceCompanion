@@ -16,7 +16,7 @@ import { getPref } from './store';
 
 const timeOf = (t: number) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-export function RecoveryCard({ onNothing }: { dark?: boolean; onNothing?: () => void }) {
+export function RecoveryCard({ onNothing }: { onNothing?: () => void }) {
   useLive();
   const a = interruptedActivity();
   const [busy, setBusy] = useState(false);
