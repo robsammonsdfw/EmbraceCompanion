@@ -129,6 +129,8 @@ export class RunEngine {
   gpsReady = false;
   lastFixAt: number | null = null;
   cues: Cue[] = [];
+  /** Each pause, start and end (ms); an open one ends when the activity does. */
+  pauses: [number, number | null][] = [];
 
   // ── The web's refs ──────────────────────────────────────────────────────
   private lastPosition: GeoPoint | null = null;
@@ -220,6 +222,7 @@ export class RunEngine {
         if (this.segmentStart !== null) { this.activeMs += t - this.segmentStart; this.segmentStart = null; }
         this.pausedAt = t;
         this.isPaused = true;
+        this.pauses.push([t, null]);
         this.elapsedTime = Math.round(this.activeMs / 1000);
         return;
       case 'resume': {
@@ -231,6 +234,7 @@ export class RunEngine {
         this.splitStartTime += pausedFor;            // splits exclude the pause
         this.intervalState.startTime += pausedFor;   // so do intervals
         this.pausedAt = null;
+        if (this.pauses.length && this.pauses[this.pauses.length - 1][1] === null) this.pauses[this.pauses.length - 1][1] = t;
         this.behindSince = null;                     // getting back up to speed isn't "behind"
         this.lastSpeedAlert = t;
         // Start fresh after a pause: otherwise the straight line from where you
@@ -687,6 +691,7 @@ export class RunEngine {
     // Bank any time still running, so the saved duration matches the display.
     if (this.segmentStart !== null) { this.activeMs += t - this.segmentStart; this.segmentStart = null; }
     this.elapsedTime = Math.round(this.activeMs / 1000);
+    for (const p of this.pauses) if (p[1] === null) p[1] = t;
     // HIIT: the phase in progress becomes the last interval.
     if (this.kind === 'hiit') {
       const lastInterval = this.closeHiitPhase(t);

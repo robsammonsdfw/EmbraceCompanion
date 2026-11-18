@@ -66,6 +66,10 @@ export const buildRunPayload = (e: RunEngine, x: PayloadExtras) => {
       // (the reading after it is timed from here).
       unit: e.cfg.unit,
       ended_at: new Date(e.finishedAt ?? e.clock).toISOString(),
+      // For filling in Fitbit's heart rate once it syncs: the zones' max, and
+      // the pauses (Fitbit's readings while paused don't count).
+      max_hr: e.cfg.maxHr,
+      pauses: e.pauses.map(([a, b]) => [new Date(a).toISOString(), new Date(b ?? e.finishedAt ?? e.clock).toISOString()]),
     },
     ...x.gear,
     weather: x.weather,
