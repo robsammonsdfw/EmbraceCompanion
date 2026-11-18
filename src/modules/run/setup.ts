@@ -29,7 +29,15 @@ export interface RunSetup {
   target_zone: number | null;
   hiit: HiitPlan | null;
   hr_pre: { bpm: number; confidence: number; source: string; taken_at: number } | null;
-  fuel: { start_kcal: number; fasted: { glycogen_kcal: number; fat_share: number; fat_kg: number } | null };
+  fuel: {
+    start_kcal: number;
+    fasted: { glycogen_kcal: number; fat_share: number; fat_kg: number } | null;
+    eaten_kcal?: number;
+    meals?: { name: string; kcal: number; at: string }[];
+    pre_run?: { description: string; kcal: number; macros: { protein: number; carbs: number; fats: number } | null; opinion: string | null } | null;
+  };
+  /** The heart-rate monitor connected on iStride's setup screen: connected to by name here. */
+  hr_monitor?: { name: string } | null;
   gear: { gear_id?: number | null; ride_shoe_id?: number | null; kit_id?: number | null; worn_ids?: number[] };
   gear_names: { gear: string | null; ride_shoes: string | null; kit: string | null };
   weather: Record<string, unknown> | null;

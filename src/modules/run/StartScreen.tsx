@@ -12,7 +12,7 @@
 import * as Location from 'expo-location';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Pedometer } from 'expo-sensors';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { ActivityMap } from '@/shell/ActivityMap';
@@ -114,7 +114,7 @@ function UploadRow({ a }: { a: Activity }) {
   );
 }
 
-type Ask = 'location' | 'motion' | null;
+type Ask = 'location' | 'motion' | 'bluetooth' | null;
 
 export default function StartScreen() {
   const styles = useStyles();
@@ -181,12 +181,20 @@ export default function StartScreen() {
     await afterLocation();
   };
   const afterLocation = async () => {
-    if (kind === 'ride') { setAsk(null); await go(false); return; }
+    if (kind === 'ride') { await afterMotion(false); return; }
     const available = await Pedometer.isAvailableAsync().catch(() => false);
-    if (!available) { setAsk(null); await go(false); return; }
+    if (!available) { await afterMotion(false); return; }
     const motion = await Pedometer.getPermissionsAsync().catch(() => null);
-    if (motion?.granted) { setAsk(null); await go(true); return; }
+    if (motion?.granted) { await afterMotion(true); return; }
     setAsk('motion');
+  };
+  /** A monitor was connected in iStride: Bluetooth is asked for here, once, so it connects by itself. */
+  const stepsChoice = useRef(false);
+  const afterMotion = async (countSteps: boolean) => {
+    stepsChoice.current = countSteps;
+    if (setup?.hr_monitor && getPref('perm.bluetooth') !== 'granted') { setAsk('bluetooth'); return; }
+    setAsk(null);
+    await go(countSteps);
   };
 
   return (
@@ -224,6 +232,22 @@ export default function StartScreen() {
               {setup.gear_names.gear && <Body>{kind === 'ride' ? 'Bike' : 'Shoes'}: {setup.gear_names.gear}</Body>}
               {setup.gear_names.ride_shoes && <Body>Cycling shoes: {setup.gear_names.ride_shoes}</Body>}
               {setup.gear_names.kit && <Body>Wearing: {setup.gear_names.kit}</Body>}
+            </View>
+          )}
+          {(setup.fuel.eaten_kcal || setup.fuel.pre_run) ? (
+            <View style={styles.rows}>
+              <Label>Fuel</Label>
+              {!!setup.fuel.eaten_kcal && <Body>{Math.round(setup.fuel.eaten_kcal)} kcal eaten in the last 24 hours</Body>}
+              {setup.fuel.pre_run && <Body>Before you start: {setup.fuel.pre_run.description}, {Math.round(setup.fuel.pre_run.kcal)} kcal</Body>}
+              {setup.fuel.pre_run?.macros && (
+                <Body muted>Protein {Math.round(setup.fuel.pre_run.macros.protein)} g · Carbs {Math.round(setup.fuel.pre_run.macros.carbs)} g · Fat {Math.round(setup.fuel.pre_run.macros.fats)} g</Body>
+              )}
+            </View>
+          ) : null}
+          {setup.hr_monitor && (
+            <View style={styles.rows}>
+              <Label>Heart rate</Label>
+              <Body>{setup.hr_monitor.name} connects when you start</Body>
             </View>
           )}
           </View>
@@ -280,8 +304,14 @@ export default function StartScreen() {
       {ask === 'location' && <Help id="companion.permission"><PermissionCard kind="location" onReady={() => { void afterLocation(); }} /></Help>}
       {ask === 'motion' && (
         <>
-          <Help id="companion.permission"><PermissionCard kind="motion" onReady={() => { setAsk(null); void go(true); }} /></Help>
-          <Button kind="secondary" title="Start without counting steps" onPress={() => { setAsk(null); void go(false); }} disabled={busy} />
+          <Help id="companion.permission"><PermissionCard kind="motion" onReady={() => { void afterMotion(true); }} /></Help>
+          <Button kind="secondary" title="Start without counting steps" onPress={() => { void afterMotion(false); }} disabled={busy} />
+        </>
+      )}
+      {ask === 'bluetooth' && (
+        <>
+          <Help id="companion.permission"><PermissionCard kind="bluetooth" onReady={() => { setPref('perm.bluetooth', 'granted'); setAsk(null); void go(stepsChoice.current); }} /></Help>
+          <Button kind="secondary" title="Start without the monitor" onPress={() => { setAsk(null); void go(stepsChoice.current); }} disabled={busy} />
         </>
       )}
       {problem && <Card tone="danger"><Body>{problem}</Body></Card>}

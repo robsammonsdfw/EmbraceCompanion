@@ -12,7 +12,7 @@ import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
 import { istride } from '@/shell/api';
-import { connectHeartRate, disconnectHeartRate, lastHeartRateDevice, onHeartRate } from '@/shell/heartRate';
+import { connectHeartRate, disconnectHeartRate, lastHeartRateDevice, onHeartRate, scanHeartRateMonitors } from '@/shell/heartRate';
 import type { LngLat } from '@/shell/ActivityMap';
 import { activeSession, resumeTracking, startTracking, stopTracking, updateNotice } from '@/shell/location';
 import { ensureAndroidNotifications } from '@/shell/permissions';
@@ -197,9 +197,22 @@ const watchHeartRate = () => {
     lastMonitorWrite = now;
     addEvent(l.activity.clientRunId, { t: now, type: 'hrm', bpm });
   });
-  // The strap used last time connects by itself (Bluetooth was allowed then).
+  if (getPref('perm.bluetooth') !== 'granted') return;
+  // The monitor connected in iStride's setup, found by its name; otherwise the
+  // one used here last time. Either connects by itself.
+  const wanted = live?.activity.setup.hr_monitor?.name?.trim().toLowerCase() || null;
   const last = lastHeartRateDevice();
-  if (last && getPref('perm.bluetooth') === 'granted') connectHeartRate(last.id).catch(() => undefined);
+  if (last && (!wanted || last.name.trim().toLowerCase() === wanted)) { connectHeartRate(last.id).catch(() => undefined); return; }
+  if (!wanted) { if (last) connectHeartRate(last.id).catch(() => undefined); return; }
+  let done = false;
+  const stop = scanHeartRateMonitors((d) => {
+    if (done || d.name.trim().toLowerCase() !== wanted) return;
+    done = true;
+    stop();
+    connectHeartRate(d.id).catch(() => undefined);
+  });
+  // Not found in 30 seconds: stop looking (the member can connect it on the run screen).
+  setTimeout(() => { if (!done) { done = true; stop(); } }, 30_000);
 };
 
 const startLoop = () => {
