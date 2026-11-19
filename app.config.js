@@ -6,6 +6,8 @@
 
 const BUNDLE_ID = 'ai.embracehealth.companion';
 const LINK_HOST = 'go.embracehealth.ai';
+const MIC_TEXT =
+  'The Companion listens to your music for a few seconds to find its beat. Nothing is recorded or saved.';
 
 /** @type {import('expo/config').ExpoConfig} */
 const config = {
@@ -78,7 +80,9 @@ const config = {
     'expo-sqlite',
     ['expo-secure-store', { faceIDPermission: false }],
     // Spoken cues keep playing with the screen locked (adds the audio background mode on iPhone).
-    ['expo-audio', { enableBackgroundPlayback: true, microphonePermission: false }],
+    // The microphone text must be set here too: microphonePermission: false
+    // removes the key, and Apple rejects the build without it (ITMS-90683).
+    ['expo-audio', { enableBackgroundPlayback: true, microphonePermission: MIC_TEXT }],
     ['expo-sensors', { motionPermission: 'The Companion counts your steps during walks.' }],
     '@maplibre/maplibre-react-native',
     // Heart-rate straps, with readings while the phone is locked during an activity.
@@ -100,8 +104,7 @@ const config = {
         iosBackgroundMode: false,
         androidForegroundService: false,
         androidPermissions: ['android.permission.RECORD_AUDIO'],
-        iosMicrophonePermission:
-          'The Companion listens to your music for a few seconds to find its beat. Nothing is recorded or saved.',
+        iosMicrophonePermission: MIC_TEXT,
       },
     ],
   ],
