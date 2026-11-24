@@ -114,6 +114,8 @@ const config = {
           'The Companion connects to your heart-rate monitor and reads your heart rate during activities you start.',
       },
     ],
+    // Runcam's clip export library needs iOS 16 but asks for 15.1; build it for 16.4.
+    './plugins/withNitroMediaKitIos',
     // Runcam: save a photo or clip to Photos. Save-only (see READ_PHOTOS_TEXT).
     [
       'expo-media-library',
