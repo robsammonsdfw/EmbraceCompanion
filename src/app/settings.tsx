@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, AppState, StyleSheet, Text, View } from 'react-native';
 
 import { signOut, useSession } from '@/shell/auth';
+import { TEST_BUILD } from '@/shell/build';
 import { MAIN_APP_URL, RUN_APP_URL } from '@/shell/config';
 import { font, setThemeMode, themed, useTheme, useThemeMode, type ThemeMode } from '@/shell/theme';
 import { Body, Button, Card, Label, ListRow, Screen, Segmented } from '@/shell/ui';
@@ -90,6 +91,16 @@ export default function Settings() {
         <ListRow icon="speedometer-outline" title="Open iStride" onPress={() => Linking.openURL(RUN_APP_URL)} />
         <ListRow icon="heart-outline" tint={t.orange} title="Open EmbraceHealthAI" onPress={() => Linking.openURL(MAIN_APP_URL)} last />
       </Card>
+
+      {/* Never shown in the App Store or Google Play build. */}
+      {TEST_BUILD && (
+        <>
+          <Label>Test tools</Label>
+          <Card style={{ paddingVertical: 4 }}>
+            <ListRow icon="videocam-outline" tint={t.orange} title="Runcam proof" sub="Record a clip and time the export" onPress={() => router.push('/proof/runcam')} last />
+          </Card>
+        </>
+      )}
 
       <Button kind="danger" icon="log-out-outline" title="Sign out" onPress={confirmSignOut} />
       <Button kind="ghost" icon="trash-outline" title="Delete my account" onPress={() => router.push('/delete-account')} />

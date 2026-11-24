@@ -18,7 +18,8 @@ The body scanner and Sency form checks come in a later version.
 src/app/            screens; the path matches the go link (/run/start, /run/live)
 src/shell/          sign-in (auth, linkSignIn, SignIn), API calls (api: mainApi, istride),
                     uploads queue, location tracking, speech, steps, ActivityMap,
-                    PermissionCard, permissions, storage, links, UI pieces
+                    PermissionCard, permissions, storage, links, UI pieces,
+                    Runcam's camera, clip export and drawing page (RUNCAM_SHELL.md)
 src/modules/run/    iStride's dashboard (Phase 3). For now, the Proof 2 test screen
 go-site/            go.embracehealth.ai: the "Get the Companion app" page (Amplify)
 app.config.js       app name, ids, permissions, links

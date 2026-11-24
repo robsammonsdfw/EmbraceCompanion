@@ -8,7 +8,7 @@ import { View } from 'react-native';
 
 import { ensureBluetooth } from './heartRate';
 import { ensureMicrophone } from './micListen';
-import { ensureCamera, ensureLocation, ensureMotion, type PermissionResult } from './permissions';
+import { ensureCamera, ensureLocation, ensureMotion, ensurePhotoSave, type PermissionResult } from './permissions';
 import { useTheme } from './theme';
 import { Body, Button, Card, Ionicons, Title, type IconName } from './ui';
 
@@ -36,6 +36,19 @@ const COPY = {
     title: 'Allow the camera',
     body: 'For a pulse check, rest a fingertip over the back camera and light. The Companion reads the colour changes in your fingertip. Nothing is recorded or saved. For fitness use only, not a medical device.',
     ask: ensureCamera,
+  },
+  // The same camera permission as the pulse check, asked from Runcam.
+  runcam: {
+    icon: 'videocam' as IconName,
+    title: 'Allow the camera',
+    body: 'Runcam takes photos and short clips of your activity with your distance and pace on them. They stay on your phone unless you share them. Clips have no sound, and your music keeps playing.',
+    ask: ensureCamera,
+  },
+  photos: {
+    icon: 'images' as IconName,
+    title: 'Allow saving to Photos',
+    body: 'The Companion saves the Runcam photos and clips you choose to your photo library. It only adds them. It never looks at your other photos.',
+    ask: ensurePhotoSave,
   },
   microphone: {
     icon: 'mic' as IconName,
