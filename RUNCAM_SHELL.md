@@ -47,9 +47,11 @@ Each file's header explains how to call it.
    build. When you add `Shots`, also add that one-line route file and
    `<Stack.Screen name="run/shots" options={{ title: 'Runcam shots' }} />` in `src/app/_layout.tsx`.
    Change nothing else in `src/app/`.
-6. **Test builds use the `preview` profile, not `development`.** A development build only runs
-   while it's connected to a computer, which doesn't work on a run. `TEST_BUILD` is true on
-   `preview`.
+6. **Test builds use the `preview` or `testflight` profile, not `development`.** A development
+   build only runs while it's connected to a computer, which doesn't work on a run. `TEST_BUILD`
+   is true on both. Rob's iPhone gets the `testflight` build through TestFlight; the Android gets
+   the `preview` build from a link. An over-the-air update has to be published to each phone's
+   channel: `--channel testflight` for the iPhone, `--channel preview` for the Android.
 
 ## Things to know
 
