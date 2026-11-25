@@ -20,7 +20,7 @@ import { RUN_APP_URL } from '@/shell/config';
 import { finish as openLink, safeReturnTo } from '@/shell/links';
 import { PermissionCard } from '@/shell/PermissionCard';
 import { font, radius, themed, useTheme } from '@/shell/theme';
-import { Body, Button, Card, GradientCard, Ionicons, Label, Screen, Title, type IconName } from '@/shell/ui';
+import { Body, Button, Card, GradientCard, Ionicons, Label, ListRow, Screen, Title, type IconName } from '@/shell/ui';
 import { retryUpload, useUpload } from '@/shell/uploads';
 
 import { activityLabel, EXERCISE_MODES, kindOfMode, modeTitle, RUN_MODES } from './calc/activityTypes';
@@ -30,6 +30,7 @@ import { isRunMode, RunMode, type Unit } from './calc/types';
 import { currentLive, interruptedActivity, startActivity, useLive } from './liveRun';
 import { Help, HelperLayer, HelperPill, useHelperScreen } from './helper/ui';
 import { RecoveryCard } from './RecoveryCard';
+import { sendWaitingShots, useShots } from './runcam/shots';
 import { defaultSetup, loadSetup, type RunSetup } from './setup';
 import { finishedActivities, forgetActivity, getPref, setPref, type Activity } from './store';
 
@@ -135,6 +136,10 @@ export default function StartScreen() {
   const [problem, setProblem] = useState<string | null>(null);
 
   useHelperScreen('start');
+
+  // Runcam: photos kept from earlier activities, and any ticked for an activity that has since saved.
+  const shots = useShots();
+  useEffect(() => { void sendWaitingShots(); }, []);
 
   // An activity already running: straight to its dashboard.
   const running = !!live && live.engine.finishedAt === null;
@@ -323,6 +328,12 @@ export default function StartScreen() {
         </Help>
       )}
       {returnTo && <Button kind="secondary" title="Back to iStride" onPress={() => { void openLink(returnTo); }} disabled={busy} />}
+      {shots.length > 0 && (
+        <Card style={{ paddingVertical: 4 }}>
+          <ListRow icon="images-outline" title="Runcam shots" sub={shots.length === 1 ? '1 photo from your activities, on this phone' : `${shots.length} photos from your activities, on this phone`}
+            onPress={() => router.push('/run/shots')} last />
+        </Card>
+      )}
       <HelperLayer />
     </Screen>
   );

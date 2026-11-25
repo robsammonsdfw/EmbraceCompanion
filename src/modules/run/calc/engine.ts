@@ -213,6 +213,15 @@ export class RunEngine {
     this.clock = Math.max(this.clock, now);
   }
 
+  /**
+   * The split in progress: how far into it, and its active seconds so far
+   * (paused time left out). For Runcam's split pace.
+   */
+  currentSplit(): { meters: number; seconds: number } {
+    const end = this.isPaused && this.pausedAt !== null ? this.pausedAt : this.finishedAt ?? this.clock;
+    return { meters: this.accumulatedSplitDistance, seconds: Math.max(0, (end - this.splitStartTime) / 1000) };
+  }
+
   // ── The member's actions ────────────────────────────────────────────────
   private applyEvent(ev: RunEvent) {
     const t = ev.t;

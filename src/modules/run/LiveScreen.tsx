@@ -1,6 +1,7 @@
 // ============================================================================
 // /run/live — the live activity dashboard, and what follows Stop.
-//   running   the dashboard for the activity's kind, Pause, then Resume / Stop
+//   running   the dashboard for the activity's kind, Pause, then Resume / Stop.
+//             The camera button beside Pause opens Runcam over the numbers.
 //   Stop      "Finish this activity?" → Finish and save, Keep going, Discard
 //   finished  Saving… → Saved → Done opens the activity's report in iStride
 // Opened with no activity in memory (the app was closed mid-activity), it
@@ -10,14 +11,15 @@
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { font } from '@/shell/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RUN_APP_URL } from '@/shell/config';
 import { finish as openLink } from '@/shell/links';
-import { retryUpload, useUpload } from '@/shell/uploads';
+import { Ionicons } from '@/shell/ui';
+import { processUploads, retryUpload, useUpload } from '@/shell/uploads';
 
 import { activityLabel, modeTitle } from './calc/activityTypes';
 import { formatClock } from './calc/constants';
@@ -28,9 +30,11 @@ import { noteScrollY, setScroll } from './helper/core';
 import type { ScreenId } from './helper/guides';
 import { Help, HelperLayer, HelperPill, useHelperScreen } from './helper/ui';
 import { activeSteps, clearLive, discardActivity, finishActivity, pause, resume, useLive } from './liveRun';
-import { closePanel, usePanel } from './panels';
+import { closePanel, openPanel, usePanel } from './panels';
 import { Chip, DarkButton, distUnit, ink, Panel, Row, runStyles, RunThemed, s } from './parts';
 import { RecoveryCard } from './RecoveryCard';
+import { RuncamPanel } from './runcam/Runcam';
+import { sendWaitingShots, shotsStillSending } from './runcam/shots';
 import { forgetActivity, getPref, setPref } from './store';
 
 const KEEP_AWAKE = 'run-dashboard';
@@ -110,6 +114,19 @@ function LiveDashboard() {
       { text: 'Discard', style: 'destructive', onPress: () => { void discardActivity().then(() => router.replace('/run/start')); } },
     ]);
 
+  // Runcam: one tap from every dashboard, pinned beside Pause. Tapping it again closes the camera.
+  const camOpen = panel === 'cam';
+  const runcam = (
+    <Help id="companion.runcam.open">
+      <Pressable accessibilityRole="button" accessibilityLabel={camOpen ? 'Close Runcam' : 'Open Runcam, the camera'}
+        onPress={() => (camOpen ? closePanel() : openPanel('cam'))} disabled={busy}
+        style={({ pressed }) => [st.cam, e.isPaused && { width: 66 }, camOpen && { backgroundColor: ink.tealBg, borderColor: ink.tealSoft }, (pressed || busy) && { opacity: 0.6 }]}>
+        <Ionicons name={camOpen ? 'close' : 'camera'} size={30} color={camOpen ? ink.tealSoft : ink.text} />
+        <Text style={[st.camText, camOpen && { color: ink.tealSoft }]}>Runcam</Text>
+      </Pressable>
+    </Help>
+  );
+
   return (
     <SafeAreaView style={st.page} edges={['bottom', 'left', 'right']}>
       <Stack.Screen options={{ title }} />
@@ -149,10 +166,13 @@ function LiveDashboard() {
           : setup.mode === RunMode.CASUAL ? <CasualDash {...props} />
           : <RunDash {...props} />}
       </ScrollView>
-      {/* The expanded map, the route weather or the pulse check, over the numbers; Pause stays below. */}
+      {/* The expanded map, the route weather, the pulse check or Runcam, over the numbers; Pause stays below. */}
       {panel && (
         <View style={StyleSheet.absoluteFill}>
-          {panel === 'map' ? <MapPanel e={e} line={live.line} /> : panel === 'pulse' ? <PulseCheck /> : <WeatherPanel setup={setup} />}
+          {panel === 'map' ? <MapPanel e={e} line={live.line} />
+            : panel === 'pulse' ? <PulseCheck />
+            : panel === 'cam' ? <RuncamPanel e={e} clientRunId={live.activity.clientRunId} />
+            : <WeatherPanel setup={setup} />}
         </View>
       )}
       </View>
@@ -164,6 +184,7 @@ function LiveDashboard() {
           // the guard against a stray tap, so there's no extra question.
           <View style={{ gap: 8 }}>
             <Row>
+              {runcam}
               <Help id="runs.live.pause" style={{ flex: 1 }}>
                 <DarkButton title="Resume" onPress={resume} bg={ink.teal} fg={ink.onTeal} style={st.controlIn} textStyle={st.controlText} disabled={busy} />
               </Help>
@@ -174,9 +195,12 @@ function LiveDashboard() {
             <DarkButton title="Discard this activity" onPress={discard} fg={ink.dim} disabled={busy} style={{ minHeight: 40, paddingVertical: 6, borderWidth: 0, backgroundColor: 'transparent' }} textStyle={{ fontSize: 12 }} />
           </View>
         ) : (
-          <Help id="runs.live.pause">
-            <DarkButton title="Pause" onPress={pause} bg={ink.text} fg={ink.bg} style={st.controlIn} textStyle={st.controlText} />
-          </Help>
+          <Row>
+            {runcam}
+            <Help id="runs.live.pause" style={{ flex: 1 }}>
+              <DarkButton title="Pause" onPress={pause} bg={ink.text} fg={ink.bg} style={st.controlIn} textStyle={st.controlText} />
+            </Help>
+          </Row>
         )}
       </View>
       <HelperLayer />
@@ -200,9 +224,22 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
     clearLive();
     if (to) void openLink(to); else router.replace('/');
   };
+  // The activity has its id in iStride: Runcam photos ticked for it go up now,
+  // and the report waits for them, up to 10 seconds, so they're already in it.
+  const [photosLate, setPhotosLate] = useState(false);
+  useEffect(() => {
+    if (!done) return undefined;
+    void sendWaitingShots();
+    const t = setTimeout(() => setPhotosLate(true), 10_000);
+    return () => clearTimeout(t);
+  }, [done]);
+  const sendingPhotos = done && !photosLate ? shotsStillSending(clientRunId) : 0;
+  // The upload queue sends what was waiting when it last started, so with more
+  // than one photo it's asked again as each one arrives.
+  useEffect(() => { if (sendingPhotos > 0) void processUploads(); }, [sendingPhotos]);
   // Saved: straight back to iStride on this activity's report, as if it had
   // been tracked there. No tap.
-  const reportUrl = done ? `${RUN_APP_URL}?section=report&run=${runId}` : null;
+  const reportUrl = done && sendingPhotos === 0 ? `${RUN_APP_URL}?section=report&run=${runId}` : null;
   useEffect(() => {
     if (!reportUrl) return;
     forgetActivity(clientRunId);
@@ -225,7 +262,7 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
         )}
         <Panel style={failed ? { borderColor: ink.red } : undefined}>
           <Text style={{ color: ink.text, fontSize: 18, fontWeight: '900' }}>
-            {done ? 'Saved. Opening your report in iStride…' : failed ? "This activity hasn't saved" : waiting ? 'Saved on your phone' : 'Saving…'}
+            {done ? (sendingPhotos > 0 ? 'Saved. Adding your Runcam photos…' : 'Saved. Opening your report in iStride…') : failed ? "This activity hasn't saved" : waiting ? 'Saved on your phone' : 'Saving…'}
           </Text>
           <Text style={{ color: ink.dim, fontSize: 15, lineHeight: 21 }}>
             {done ? 'Your report is ready in iStride: your heart rate after the activity, the AI coach, your gear and photos.'
@@ -236,7 +273,7 @@ function Finished({ clientRunId, title }: { clientRunId: string; title: string }
           {failed && <DarkButton title="Try again" onPress={() => retryUpload(clientRunId)} bg={ink.red} fg="#FFFFFF" style={st.tall} />}
         </Panel>
         {done
-          ? <DarkButton title="Open my report" onPress={() => leave(reportUrl)} bg={ink.teal} fg={ink.onTeal} style={st.control} textStyle={st.controlText} />
+          ? <DarkButton title="Open my report" onPress={() => leave(`${RUN_APP_URL}?section=report&run=${runId}`)} bg={ink.teal} fg={ink.onTeal} style={st.control} textStyle={st.controlText} />
           : <DarkButton title="Close" onPress={() => leave(null)} style={st.tall} />}
         {!done && <Text style={{ color: ink.faint, fontSize: 13, textAlign: 'center' }}>You can close this. The activity stays on your phone until it has uploaded, and shows under Activity when it has.</Text>}
       </ScrollView>
@@ -253,6 +290,8 @@ const st = runStyles(() => StyleSheet.create({
   controls: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ink.line, backgroundColor: ink.bg },
   control: { flex: 1, minHeight: 84, borderRadius: 26 },
   controlIn: { minHeight: 84, borderRadius: 26, borderWidth: 0 },
+  cam: { width: 84, minHeight: 84, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: ink.panel, borderWidth: 1, borderColor: ink.line },
+  camText: { color: ink.dim, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   controlText: { fontFamily: font.display, fontSize: 32, fontWeight: 'normal', letterSpacing: 1 },
   tall: { minHeight: 64 },
   question: { color: ink.text, fontSize: 24, fontWeight: '900', textAlign: 'center' },

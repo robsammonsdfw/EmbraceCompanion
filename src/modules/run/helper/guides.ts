@@ -88,6 +88,20 @@ export const GUIDES: Guide[] = [
     ],
   },
   {
+    id: 'companion.runcam', title: 'Take a Runcam photo', summary: 'A photo of your activity with your distance, pace and split pace on it, ready to share.',
+    screens: ALL, doneMessage: 'That’s Runcam. Tap the camera beside Pause any time during an activity.',
+    steps: [
+      { id: 'open', kind: 'tap', anchor: 'companion.runcam.open', title: 'Now tap the camera',
+        body: 'Runcam opens over your numbers. Tracking, the coach and your music carry on.', skipWhenVisible: ['companion.runcam.shutter', 'companion.runcam.allow', 'companion.runcam.actions'] },
+      { id: 'allow', kind: 'tap', anchor: 'companion.runcam.allow', title: 'Now tap Continue',
+        body: 'Your phone asks next. Choose Allow, so Runcam can use the camera.', skipWhenVisible: ['companion.runcam.shutter', 'companion.runcam.actions'] },
+      { id: 'photo', kind: 'tap', anchor: 'companion.runcam.shutter', waitForAnchor: true, title: 'Now tap the round button',
+        body: 'It takes a photo with the three numbers you see on it. The button at the top right switches to the front camera.', skipWhenVisible: ['companion.runcam.actions'] },
+      { id: 'share', kind: 'info', anchor: 'companion.runcam.actions', waitForAnchor: true, title: 'Share, save or keep',
+        body: 'Share opens your phone’s share menu: Instagram, Messages, anything installed. Save to Photos puts it in your photo library. Keep leaves it in Runcam shots and takes you back to the camera.', placement: 'banner', nextLabel: 'Got it' },
+    ],
+  },
+  {
     id: 'runs.live.read', title: 'Read the run screen', summary: 'What every number on the run screen means, top to bottom.',
     screens: RUN, doneMessage: 'That’s your run screen — tap Pause, then Stop when you finish.',
     steps: [

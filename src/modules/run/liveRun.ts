@@ -32,6 +32,7 @@ import {
   activeActivity, addEvent, createActivity, cueSpoken, eventsAfter, getPref, lastPointAt, markAlive, markCue, pointsAfter, setStatus,
   type Activity,
 } from './store';
+import { activityDiscarded } from './runcam/shots';
 import { beep, hush, prefetch, say } from './voice';
 
 /** A cue older than this when its turn comes is skipped (the app was closed, or the phone was busy). */
@@ -446,6 +447,8 @@ export const discardActivity = async () => {
   const a = l?.activity ?? activeActivity();
   if (a) {
     setStatus(a.clientRunId, 'discarded', Date.now());
+    // Its Runcam shots stay on the phone; none of them has a report to go to.
+    activityDiscarded(a.clientRunId);
     istride(`/runs/live/${a.clientRunId}`, { method: 'DELETE' }).catch(() => undefined);
   }
   l?.counter?.stop();
