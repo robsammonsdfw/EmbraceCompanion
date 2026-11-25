@@ -69,6 +69,7 @@ export default function RootLayout() {
         <Stack.Screen name="run/start" options={{ title: 'Activity' }} />
         <Stack.Screen name="run/live" options={{ title: 'Activity' }} />
         <Stack.Screen name="run/shots" options={{ title: 'Runcam shots' }} />
+        <Stack.Screen name="msk" options={{ title: 'Advanced MSK Health' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="delete-account" options={{ title: 'Delete account' }} />
         <Stack.Screen name="proof/runcam" options={{ title: 'Runcam proof' }} />

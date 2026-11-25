@@ -18,3 +18,11 @@ export const RUN_APP_URL = 'https://run.embracehealth.ai/';
  * the map tiles carry CARTO's "API key required" watermark.
  */
 export const CARTO_API_KEY = process.env.EXPO_PUBLIC_CARTO_API_KEY ?? '';
+
+/**
+ * Sency auth key, for Advanced MSK Health (src/modules/msk). It comes from the
+ * EAS environment variable EXPO_PUBLIC_SENCY_AUTH_KEY, written into the app
+ * when it's built or updated. Sency's SDK needs it on the phone, so it can't be
+ * kept on the server. Without it the check says it isn't set up yet.
+ */
+export const SENCY_AUTH_KEY = process.env.EXPO_PUBLIC_SENCY_AUTH_KEY ?? '';

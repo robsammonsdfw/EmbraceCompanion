@@ -3,11 +3,12 @@
 **What it is.** The EmbraceHealthAI phone app for iPhone and Android (React Native, Expo SDK 58).
 The web apps open it with `https://go.embracehealth.ai/...` links.
 
-**Version 1 does two things:**
+**What it does:**
 - **iStride's live activity dashboard.** Runs, rides and walks, tracking with the screen locked.
 - **Phone alerts** for all three apps.
+- **Advanced MSK Health.** Sency's guided movement checks with the camera (`/msk`).
 
-The body scanner and Sency form checks come in a later version.
+The body scanner comes in a later version.
 
 **Docs**
 - The plan: `COMPANION_APP_PLAN.md`, in the EmbraceMacro repo (`docs/`) and the EmbraceMainApp Project.
@@ -21,6 +22,7 @@ src/shell/          sign-in (auth, linkSignIn, SignIn), API calls (api: mainApi,
                     PermissionCard, permissions, storage, links, UI pieces,
                     Runcam's camera, clip export and drawing page (RUNCAM_SHELL.md)
 src/modules/run/    iStride's dashboard (Phase 3). For now, the Proof 2 test screen
+src/modules/msk/    Advanced MSK Health: Sency's movement checks (CLAUDE.md has the details)
 go-site/            go.embracehealth.ai: the "Get the Companion app" page (Amplify)
 app.config.js       app name, ids, permissions, links
 eas.json            build profiles: development, preview (testers), production

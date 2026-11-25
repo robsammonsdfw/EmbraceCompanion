@@ -2,7 +2,8 @@
 
 The phone app (React Native, Expo SDK 58) that the EmbraceHealthAI web apps open for what a
 website can't do. Version 1 is iStride's live activity dashboard (runs, rides, walks; tracking with
-the screen locked) and phone alerts for all three apps. The body scanner and Sency come later.
+the screen locked) and phone alerts for all three apps. Advanced MSK Health (Sency's movement
+checks) was added Nov 24, 2026. The body scanner comes later.
 
 - **The plan:** `COMPANION_APP_PLAN.md`.
 - **What each app adds:** `COMPANION_APP_FOR_APPS.md`.
@@ -17,6 +18,7 @@ never hand-edit `ios/` or `android/`.
 |---|---|
 | `src/app/`, `src/shell/`, `app.config.js`, `eas.json`, `go-site/` | Main app (EmbraceMacro) session |
 | `src/modules/run/` | iStride session |
+| `src/modules/msk/`, `plugins/withSencyPods.js` | SencyMSK session |
 
 - **Other folders.** A module session changes only its own folder. If it needs something from the
   shell (a new service, permission, library or route), it asks Rob, and the main app session adds
@@ -25,6 +27,20 @@ never hand-edit `ios/` or `android/`.
   they're planned.
 - **One session at a time.** Only one session works in this repo at a time. Always `git pull`
   before editing.
+
+## Advanced MSK Health (Sency)
+- **What it is.** `https://go.embracehealth.ai/msk` opens `src/modules/msk/MskScreen.tsx`. The main
+  app links to it from Body + Fitness › Form Checker › Advanced MSK Health.
+- **The SDK.** `@sency/react-native-smkit-ui`, pinned to an exact version. Only
+  `src/modules/msk/sency.ts` imports it. The build settings it needs are in `app.config.js`
+  (`expo-build-properties`) and `plugins/withSencyPods.js`.
+- **The key.** EAS environment variable `EXPO_PUBLIC_SENCY_AUTH_KEY`, set for every environment
+  (development, preview, production). Without it the screen says "Not set up yet".
+- **Older builds.** A build made before the SDK was added shows "Update the Companion app" on that
+  screen. Everything else in it works as before.
+- **Not verified here.** Claude's workspace can't run an iPhone or Android build, and Sency's own
+  demo app runs this package on React Native's old architecture, which this app doesn't have. The
+  first build on Expo's servers is the test.
 
 ## Rules
 - Commit and push straight to `main`.

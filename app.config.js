@@ -9,7 +9,7 @@ const LINK_HOST = 'go.embracehealth.ai';
 const MIC_TEXT =
   'The Companion listens to your music for a few seconds to find its beat. Nothing is recorded or saved.';
 const CAMERA_TEXT =
-  'The Companion uses the camera for two things you start yourself: a pulse check, which reads the colour of your fingertip and saves nothing, and Runcam, which takes photos and short clips of your activity with your numbers on them. Photos and clips stay on your phone unless you share them. For fitness use only, not a medical device.';
+  'The Companion uses the camera for three things you start yourself: a pulse check, which reads the colour of your fingertip and saves nothing; Runcam, which takes photos and short clips of your activity with your numbers on them; and an Advanced MSK Health check, which follows how you move to score your movement. Photos and clips stay on your phone unless you share them. For fitness use only, not a medical device.';
 const SAVE_PHOTOS_TEXT = 'The Companion saves the Runcam photos and clips you choose to your photo library.';
 // The Companion never reads the library. Apple still wants this text in the
 // build, because the photo library code inside the app is able to read (the
@@ -17,6 +17,15 @@ const SAVE_PHOTOS_TEXT = 'The Companion saves the Runcam photos and clips you ch
 // The app only ever asks for the save-only permission, so members never see it.
 const READ_PHOTOS_TEXT =
   'The Companion only saves the Runcam photos and clips you choose to your photo library. It does not look at your other photos.';
+// Advanced MSK Health (Sency, src/modules/msk). Release builds are shrunk (R8),
+// and Sency's SDK and its React Native bridge read their own classes by name,
+// so both are kept as they are.
+const SENCY_MAVEN_REPO = 'https://artifacts.sency.ai/artifactory/release/';
+const SENCY_PROGUARD_RULES = [
+  '# Sency (Advanced MSK Health): the SDK and its React Native bridge.',
+  '-keep class com.sency.** { *; }',
+  '-keep class com.smkituilibrary.** { *; }',
+].join('\n');
 
 /** @type {import('expo/config').ExpoConfig} */
 const config = {
@@ -48,7 +57,8 @@ const config = {
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
-    // Steps on walks (Android 10+); the camera for the pulse check and Runcam.
+    // Steps on walks (Android 10+); the camera for the pulse check, Runcam and
+    // Advanced MSK Health.
     permissions: ['android.permission.ACTIVITY_RECOGNITION', 'android.permission.CAMERA'],
     // Runcam only saves to the gallery. Nothing in the app may read it, so the
     // read permissions the photo library package would add are taken out.
@@ -116,6 +126,14 @@ const config = {
     ],
     // Runcam's clip export library needs iOS 16 but asks for 15.1; build it for 16.4.
     './plugins/withNitroMediaKitIos',
+    // Advanced MSK Health: Sency's SDK (@sency/react-native-smkit-ui).
+    //   Android: where Gradle finds the SDK, and what the shrinker must keep.
+    //   iPhone:  where CocoaPods finds the SDK, and how it links (the plugin's header).
+    [
+      'expo-build-properties',
+      { android: { extraMavenRepos: [SENCY_MAVEN_REPO], extraProguardRules: SENCY_PROGUARD_RULES } },
+    ],
+    './plugins/withSencyPods',
     // Runcam: save a photo or clip to Photos. Save-only (see READ_PHOTOS_TEXT).
     [
       'expo-media-library',

@@ -36,7 +36,13 @@ export const ensureMotion = async (): Promise<PermissionResult> => {
   return asked.canAskAgain ? 'denied' : 'blocked';
 };
 
-/** The camera, for the pulse check (PulseCamera.tsx) and Runcam (RunCamera.tsx). */
+/** Whether the camera is already allowed. Never asks. */
+export const hasCamera = (): boolean => VisionCamera.cameraPermissionStatus === 'authorized';
+
+/**
+ * The camera, for the pulse check (PulseCamera.tsx), Runcam (RunCamera.tsx)
+ * and Advanced MSK Health (src/modules/msk).
+ */
 export const ensureCamera = async (): Promise<PermissionResult> => {
   const status = VisionCamera.cameraPermissionStatus;
   if (status === 'authorized') return 'granted';

@@ -74,6 +74,10 @@ export default function Home() {
       </View>
 
       <Card style={{ paddingVertical: 4 }}>
+        <ListRow icon="body-outline" tint={t.purple} title="Advanced MSK Health" sub="A movement check with your camera" onPress={() => router.push('/msk')} last />
+      </Card>
+
+      <Card style={{ paddingVertical: 4 }}>
         <ListRow icon="speedometer-outline" title="iStride" sub="Your runs, reports, groups and plans" onPress={() => Linking.openURL(RUN_APP_URL)} />
         <ListRow icon="heart-outline" tint={t.orange} title="EmbraceHealthAI" sub="Your health, nutrition and care" onPress={() => Linking.openURL(MAIN_APP_URL)} last />
       </Card>

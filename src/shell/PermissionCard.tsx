@@ -44,6 +44,13 @@ const COPY = {
     body: 'Runcam takes photos and short clips of your activity with your distance and pace on them. They stay on your phone unless you share them. Clips have no sound, and your music keeps playing.',
     ask: ensureCamera,
   },
+  // The same camera permission again, asked from Advanced MSK Health.
+  movement: {
+    icon: 'body' as IconName,
+    title: 'Allow the camera',
+    body: 'The check uses your camera to follow how you move, so it can guide you and score each movement. For fitness use only, not a medical device.',
+    ask: ensureCamera,
+  },
   photos: {
     icon: 'images' as IconName,
     title: 'Allow saving to Photos',
